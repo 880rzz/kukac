@@ -194,7 +194,7 @@ A Browser QA nemcsak betölti az oldalt, hanem seedelt játékmeneti regresszió
 
 ## Arcade ID, globális ranglista és játékosprofil
 
-A repó tartalmaz egy szerveroldali Arcade ID rendszert Vercel Functions + Neon Postgres környezethez.
+A repó Cloudflare Worker + D1 alapon fut. Ugyanaz a Worker szolgálja ki a statikus játékot és az API-t, ezért a session cookie same-origin marad.
 
 Funkciók:
 
@@ -211,40 +211,34 @@ Funkciók:
 - alap plausibility/anti-cheat ellenőrzés
 - guest játék továbbra is támogatott
 
-### Backend fájlok
+### Cloudflare fájlok
 
-- `api/auth/register.js`
-- `api/auth/login.js`
-- `api/auth/logout.js`
-- `api/auth/me.js`
-- `api/auth/recover-nickname.js`
-- `api/leaderboard.js`
-- `api/player.js`
-- `api/game/start.js`
-- `api/game/submit.js`
-- `api/_lib/db.js`
-- `api/_lib/security.js`
-- `api/_lib/auth.js`
-- `api/_lib/http.js`
+- `src/worker.js` — API router, auth, session, ranglista és score-submit
+- `migrations/0001_initial.sql` — verziózott D1 séma
+- `wrangler.jsonc` — Worker, statikus asset és D1 binding
+- `scripts/build.mjs` — kizárólag a publikus asseteket másolja a `dist/` könyvtárba
+- `scripts/check.mjs` — syntax/security/schema contract ellenőrzés
+- `scripts/api-qa.mjs` — teljes lokális auth/recovery/game-run API próba
 
-A PostgreSQL táblákat az API első sikeres adatbázis-kapcsolatakor `CREATE TABLE IF NOT EXISTS` műveletekkel hozza létre.
+## Helyi fejlesztés és ellenőrzés
 
-## Vercel + Neon aktiválás
-
-A cloud account/ranglista funkcióhoz a GitHub Pages helyett a teljes repót Vercelen kell futtatni, ugyanazon origin alatt, hogy a HttpOnly session cookie stabilan működjön.
-
-1. Importáld a `880rzz/kukac` GitHub repót új Vercel projektként.
-2. A Vercel Marketplace-en csatlakoztass Neon Postgres adatbázist.
-3. Ellenőrizd, hogy a projekt Production/Preview környezetében elérhető a `DATABASE_URL`.
-4. Deploy.
-5. Nyisd meg az oldalt, és hozz létre egy teszt Arcade ID-t.
-6. A regisztrációnál megjelenő recovery code-ot mentsd el.
-7. Játssz egy menetet, majd ellenőrizd a globális ranglistát és a nicknévre kattintva a profil statisztikáját.
-
-Szükséges környezeti változó:
-
-```
-DATABASE_URL=<Neon Postgres connection string>
+```sh
+npm ci
+npm run db:migrate:local
+npm test
+npm run dev
 ```
 
-A `.env.example` csak a kulcs nevét tartalmazza; secret értéket nem szabad commitolni.
+## Cloudflare élesítés
+
+Production URL: `https://kukac.vipach.at`
+
+1. `npx wrangler login`
+2. `npx wrangler d1 create kukac-arcade`
+3. A kapott `database_id` kerüljön a `wrangler.jsonc` D1 bindingjába.
+4. `npm run db:migrate:remote`
+5. `npm run deploy`
+
+A `wrangler.jsonc` a `kukac.vipach.at` hostot Worker custom domainként deklarálja; sikeres deploykor a Cloudflare létrehozza vagy hozzárendeli a szükséges DNS rekordot a fiókban kezelt `vipach.at` zónán.
+
+A Workerhez nem kell alkalmazás-secret: a session és recovery tokenek kriptográfiailag véletlenek, az adatbázisban csak SHA-256 hashük szerepel. A jelszó a meglévő `scrypt$16384$8$1$...` formátumban marad.
