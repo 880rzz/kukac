@@ -35,7 +35,7 @@ jobs:
           node <<'NODE'
           const { chromium } = require('playwright');
           const fs = require('node:fs');
-          const URL='https://kukac.vipach.at/';
+          const BASE_URL='https://kukac.vipach.at/';
           const viewports=[
             {name:'desktop',width:1440,height:900},
             {name:'tablet',width:834,height:1112},
@@ -53,10 +53,10 @@ jobs:
                 page.on('console',m=>{if(m.type()==='error')errors.push('console:'+m.text())});
                 page.on('requestfailed',r=>failed.push(r.url()+':'+(r.failure()?.errorText||'failed')));
                 await page.addInitScript(()=>addEventListener('unhandledrejection',e=>console.error('unhandledrejection:'+String(e.reason))));
-                const response=await page.goto(URL+'?audit='+Date.now(),{waitUntil:'networkidle',timeout:60000});
+                const response=await page.goto(BASE_URL+'?audit='+Date.now(),{waitUntil:'networkidle',timeout:60000});
                 if(vp.name==='desktop'){
                   for(const asset of ['index.html','game.js','account.js','i18n.js','styles.css']){
-                    const live=await context.request.get(URL+asset+'?sha='+encodeURIComponent(process.env.EXPECTED_SHA||''));
+                    const live=await context.request.get(BASE_URL+asset+'?sha='+encodeURIComponent(process.env.EXPECTED_SHA||''));
                     if(live.status()!==200)fail('exact-live asset HTTP '+asset+': '+live.status());
                     const liveText=await live.text();
                     const expected=fs.readFileSync(asset,'utf8');
@@ -106,7 +106,7 @@ jobs:
               const page=await context.newPage();
               const errors=[];
               page.on('pageerror',e=>errors.push(String(e)));
-              await page.goto(URL+'?account-audit='+Date.now(),{waitUntil:'networkidle'});
+              await page.goto(BASE_URL+'?account-audit='+Date.now(),{waitUntil:'networkidle'});
               await page.selectOption('#startLangSelect','en');
               await page.click('#startIdentity');
               await page.click('[data-account-mode="register"]');
