@@ -18,8 +18,7 @@ jobs:
           node-version: 20
       - name: Install Playwright
         run: |
-          npm init -y >/dev/null 2>&1
-          npm install --save-dev playwright@1.55.0
+          npm install --no-save playwright@1.55.0
           npx playwright install --with-deps chromium
       - name: Start static server
         run: |
@@ -43,7 +42,7 @@ jobs:
                 const page = await browser.newPage({ viewport: { width: vp.width, height: vp.height } });
                 const errors = [];
                 page.on('pageerror', e => errors.push(String(e)));
-                await page.goto('http://127.0.0.1:4173/?qa=1&seed=42', { waitUntil: 'networkidle' });
+                await page.goto('http://127.0.0.1:4173/?qa=1&seed=42', { waitUntil: 'domcontentloaded' });
 
                 await page.waitForSelector('#startLangSelect');
                 if (await page.locator('#accountBtn').count() !== 1 || await page.locator('#leaderboardBtn').count() !== 1) {
@@ -56,15 +55,44 @@ jobs:
                   throw new Error(vp.name + ': German is not the default language');
                 }
 
-                await page.selectOption('#startLangSelect', 'en');
-                await page.waitForTimeout(100);
+                for (const locale of ['tr','uk','hu','en']) {
+                  await page.selectOption('#startLangSelect', locale);
+                  if (await page.locator('#startLangSelect').inputValue() !== locale) throw new Error(vp.name + ': language switching failed: ' + locale);
+                }
                 const startText = (await page.locator('#startBtn').innerText()).trim();
-                if (startText !== 'START GAME') throw new Error(vp.name + ': language switching failed: ' + startText);
+                if (startText !== 'START GAME') throw new Error(vp.name + ': English copy failed: ' + startText);
 
                 if (vp.name === 'desktop') {
                   await page.click('#startIdentity');
                   await page.waitForTimeout(100);
                   if (await page.locator('#account').evaluate(el => getComputedStyle(el).display) === 'none') throw new Error('desktop: account overlay did not open');
+                  await page.click('[data-account-mode="register"]');
+                  await page.fill('#registerNickname','Alpha'); await page.fill('#registerPassword','alpha-pass-42'); await page.fill('#registerPassword2','alpha-pass-42'); await page.click('#registerForm button[type="submit"]');
+                  await page.waitForFunction(() => window.KUKAC_ACCOUNT?.player?.nickname === 'Alpha');
+                  await page.evaluate(() => window.KUKAC_ACCOUNT.submitRun({score:120,level:3,stars:8,coins:2,bestCombo:4,starsRecovered:1,dragonSurvivals:1,royalStars:1}));
+                  const backup = await page.evaluate(() => window.KUKAC_ACCOUNT.__test.backupFor('Alpha'));
+                  await page.click('#logoutBtn'); await page.click('[data-account-mode="register"]');
+                  await page.fill('#registerNickname','Beta'); await page.fill('#registerPassword','beta-pass-42'); await page.fill('#registerPassword2','beta-pass-42'); await page.click('#registerForm button[type="submit"]');
+                  await page.waitForFunction(() => window.KUKAC_ACCOUNT?.player?.nickname === 'Beta');
+                  await page.evaluate(() => window.KUKAC_ACCOUNT.submitRun({score:40,level:1,stars:2,coins:0,bestCombo:1,starsRecovered:0,dragonSurvivals:0,royalStars:0}));
+                  await page.click('#closeAccount'); await page.click('#leaderboardBtn',{force:true});
+                  await page.evaluate(() => window.KUKAC_ACCOUNT.loadLeaderboard());
+                  const leaderboardNames = (await page.locator('.leader-row strong').allTextContents()).map(value => value.trim());
+                  if (leaderboardNames.length !== 2 || leaderboardNames[0] !== 'Alpha' || leaderboardNames[1] !== 'Beta') throw new Error('desktop: local leaderboard order failed: '+leaderboardNames.join(','));
+                  await page.evaluate(() => document.querySelector('.leader-row[data-nickname="Alpha"]').click());
+                  if (!(await page.locator('#playerProfileContent').innerText()).includes('120')) throw new Error('desktop: clickable profile stats failed');
+                  await page.evaluate(() => { document.getElementById('playerProfile').style.display='none'; document.getElementById('leaderboard').style.display='none'; });
+                  await page.evaluate(() => localStorage.clear()); await page.reload({waitUntil:'domcontentloaded'});
+                  if (await page.evaluate(() => Boolean(window.KUKAC_ACCOUNT?.player))) throw new Error('desktop: guest mode failed after storage clear');
+                  await page.click('#startIdentity'); await page.click('[data-account-mode="recover"]'); await page.fill('#recoveryCodeInput',JSON.stringify(backup)); await page.click('#recoverForm button[type="submit"]');
+                  await page.waitForFunction(() => window.KUKAC_ACCOUNT?.player?.nickname === 'Alpha');
+                  if (!await page.evaluate(() => window.KUKAC_ACCOUNT.player.highScore === 120 && window.KUKAC_ACCOUNT.player.totalGames === 1)) throw new Error('desktop: recovery stats failed');
+                  await page.reload({waitUntil:'domcontentloaded'});
+                  if (!await page.evaluate(() => window.KUKAC_ACCOUNT?.player?.nickname === 'Alpha')) throw new Error('desktop: profile persistence failed');
+                  await page.click('#startIdentity'); await page.click('#logoutBtn');
+                  await page.fill('#loginNickname','Alpha'); await page.fill('#loginPassword','wrong-pass'); await page.click('#loginForm button[type="submit"]');
+                  await page.waitForTimeout(250); if (await page.evaluate(() => Boolean(window.KUKAC_ACCOUNT.player))) throw new Error('desktop: wrong password accepted');
+                  await page.fill('#loginPassword','alpha-pass-42'); await page.click('#loginForm button[type="submit"]'); await page.waitForFunction(() => window.KUKAC_ACCOUNT?.player?.nickname === 'Alpha');
                   await page.click('#closeAccount');
                 }
                 await page.click('#startBtn');

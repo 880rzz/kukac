@@ -13,30 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate modular game
-        run: |
-          node <<'NODE'
-          const fs=require('fs');
-          for(const file of ['index.html','styles.css','i18n.js','world.js','actors.js','audio.js','account.js','game.js','package.json','vercel.json','api/_lib/db.js','api/_lib/security.js','api/_lib/http.js','api/_lib/auth.js','api/auth/register.js','api/auth/login.js','api/auth/logout.js','api/auth/me.js','api/auth/recover-nickname.js','api/leaderboard.js','api/player.js','api/game/start.js','api/game/submit.js']){
-            if(!fs.existsSync(file)) throw new Error('Missing '+file);
-          }
-          const html=fs.readFileSync('index.html','utf8');
-          const game=fs.readFileSync('game.js','utf8');
-          const i18n=fs.readFileSync('i18n.js','utf8');
-          if(!html.includes('<html lang="de">')) throw new Error('German default language missing');
-          for(const ref of ['styles.css','i18n.js','world.js','actors.js','audio.js','account.js','game.js']) if(!html.includes(ref)) throw new Error('Missing asset reference '+ref);
-          const required=['langSelect','startLangSelect','startBtn','score','level','best','eventPill','livesHud','shieldHud','accountBtn','leaderboardBtn','account','leaderboard','playerProfile'];
-          for(const id of required){if(!html.includes('id="'+id+'"')) throw new Error('Missing #'+id)}
-          for(const name of ['i18n.js','world.js','actors.js','audio.js','account.js','game.js','api/_lib/db.js','api/_lib/security.js','api/_lib/http.js','api/_lib/auth.js','api/auth/register.js','api/auth/login.js','api/auth/logout.js','api/auth/me.js','api/auth/recover-nickname.js','api/leaderboard.js','api/player.js','api/game/start.js','api/game/submit.js']){const src=fs.readFileSync(name,'utf8');
-            try{new Function(src)}catch(e){throw new Error(name+' syntax error: '+e.message)}
-          }
-          for(const token of ['gameState','spiralCells','triggerRoyalEvent','triggerDragonEvent','starSaved','visibilitychange','prefers-reduced-motion','__KUKAC_QA__']){
-            if(!(game.includes(token)||html.includes(token)||fs.readFileSync('styles.css','utf8').includes(token))) throw new Error('Missing feature token '+token);
-          }
-          const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
-          if(!pkg.dependencies?.['@neondatabase/serverless']) throw new Error('Neon dependency missing');
-          if(!fs.readFileSync('api/_lib/security.js','utf8').includes('scrypt')) throw new Error('Password hashing missing');
-          if(!fs.readFileSync('api/_lib/http.js','utf8').includes('HttpOnly')) throw new Error('HttpOnly session cookie missing');
-          if(!fs.readFileSync('api/game/submit.js','utf8').includes('finished_at IS NULL')) throw new Error('Idempotent score claim missing');
-          console.log('KUKAC 3D modular + account smoke check passed');
-          NODE
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm test

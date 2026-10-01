@@ -1,9 +1,7 @@
 {
   "name": "kukac-3d-arcade",
   "private": true,
-  "version": "2.0.0",
+  "version": "3.0.0",
   "engines": { "node": ">=20" },
-  "dependencies": {
-    "@neondatabase/serverless": "^1.0.2"
-  }
+  "scripts": { "test": "node scripts/static-check.mjs" }
 }
