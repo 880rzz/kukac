@@ -39,7 +39,7 @@ const starLight=new THREE.PointLight(0xffd34d,1.8,8,2);starLight.visible=false;s
 
 let snake=[], food=null, coin=null, obstacles=[], direction={x:1,z:0}, nextDirection={x:1,z:0};
 let score=0, level=1, best=Number(localStorage.getItem('kukac3d-best')||0);
-let baseInterval=155, boosting=false, shake=0, audioCtx=null;
+let baseInterval=155, boosting=false, shake=0;
 let npcs=[], crowd=[], nextNpcRaid=Infinity;
 const gameState={
   player:{lifeCount:5,shieldCharges:3,invulnerableUntilMs:0},
@@ -82,91 +82,10 @@ const bodyAlt=mat(0x22a83d,0.5,0.02), brickMat=mat(0xc85a31,0.7,0.02);
 const goldMat=new THREE.MeshStandardMaterial({color:0xffce38,roughness:0.3,metalness:0.65,emissive:0x7a3f00,emissiveIntensity:0.18});
 const starMat=new THREE.MeshStandardMaterial({color:0xffe866,roughness:0.28,metalness:0.16,emissive:0x8a5c00,emissiveIntensity:0.28});
 
-function buildWorld(){
-  while(world.children.length) world.remove(world.children[0]);
-  while(deco.children.length) deco.remove(deco.children[0]);
-  const floor=new THREE.Mesh(new THREE.BoxGeometry(GRID+1,0.6,GRID+1),mat(0x66c84b,0.78));
-  floor.position.y=-0.35;floor.receiveShadow=true;world.add(floor);
-
-  const tileMat=mat(0x79d65e,0.72);
-  const tileGeo=new THREE.BoxGeometry(0.92,0.08,0.92);
-  for(let x=-9;x<=9;x++) for(let z=-9;z<=9;z++){
-    if((x+z)%2===0){
-      const t=new THREE.Mesh(tileGeo,tileMat);t.position.set(x,0.02,z);t.receiveShadow=true;world.add(t);
-    }
-  }
-  const wallMat=mat(0xd88b38,0.65);
-  for(let i=-10;i<=10;i++){
-    [[i,-10],[i,10],[-10,i],[10,i]].forEach(([x,z])=>{
-      const b=new THREE.Mesh(new THREE.BoxGeometry(0.92,0.78,0.92),wallMat);
-      b.position.set(x,0.12,z);b.castShadow=true;b.receiveShadow=true;world.add(b);
-    });
-  }
-  const under=new THREE.Mesh(new THREE.BoxGeometry(GRID+5,1.8,GRID+5),mat(0x98612c,0.95));
-  under.position.y=-1.55;world.add(under);
-
-  for(let i=0;i<13;i++){
-    const cloud=new THREE.Group();
-    for(let p=0;p<3;p++){
-      const c=new THREE.Mesh(new THREE.SphereGeometry(0.7+rand()*0.5,12,10),mat(0xffffff,0.95));
-      c.position.set((p-1)*0.65,rand()*0.2,0);cloud.add(c);
-    }
-    const a=i/13*Math.PI*2,r=22+rand()*9;
-    cloud.position.set(Math.cos(a)*r,7+rand()*6,Math.sin(a)*r);
-    cloud.scale.setScalar(0.8+rand()*1.3);deco.add(cloud);
-  }
-  for(let i=0;i<14;i++){
-    const hill=new THREE.Mesh(new THREE.ConeGeometry(3+rand()*3,5+rand()*5,7),mat(i%2?0x5fae39:0x438c31,0.9));
-    const a=i/14*Math.PI*2,r=18+rand()*7;
-    hill.position.set(Math.cos(a)*r,1,Math.sin(a)*r);hill.rotation.y=rand()*Math.PI;deco.add(hill);
-  }
-}
-buildWorld();
+window.KUKAC_WORLD.build({THREE,world,deco,GRID,mat,rand});
 
 
-function addPart(parent,geo,color,pos,rot){
-  const m=new THREE.Mesh(geo,mat(color,0.52,0.04));
-  m.position.set(pos[0],pos[1],pos[2]);
-  if(rot)m.rotation.set(rot[0],rot[1],rot[2]);
-  m.castShadow=true;parent.add(m);return m;
-}
-function makeHumanoid(kind='fan',shirt=0x3a83e8){
-  const g=new THREE.Group(),skin=0xf0b27a;
-  addPart(g,new THREE.SphereGeometry(0.22,12,10),skin,[0,1.45,0]);
-  addPart(g,new THREE.BoxGeometry(0.42,0.62,0.3),shirt,[0,1.02,0]);
-  addPart(g,new THREE.BoxGeometry(0.14,0.55,0.14),0x26354a,[-0.14,0.48,0]);
-  addPart(g,new THREE.BoxGeometry(0.14,0.55,0.14),0x26354a,[0.14,0.48,0]);
-  const la=addPart(g,new THREE.BoxGeometry(0.12,0.52,0.12),skin,[-0.31,1.02,0]);
-  const ra=addPart(g,new THREE.BoxGeometry(0.12,0.52,0.12),skin,[0.31,1.02,0]);
-  g.userData.arms=[la,ra];g.userData.kind=kind;
-
-  if(kind==='queen'){
-    addPart(g,new THREE.ConeGeometry(0.42,0.62,14),0xe95cae,[0,0.88,0]);
-    addPart(g,new THREE.CylinderGeometry(0.19,0.25,0.18,10),0xffd447,[0,1.75,0]);
-    for(let i=0;i<5;i++)addPart(g,new THREE.ConeGeometry(0.055,0.16,6),0xffd447,[(i-2)*0.08,1.91,0]);
-  } else if(kind==='soldier'){
-    addPart(g,new THREE.CylinderGeometry(0.24,0.27,0.28,14),0xc7b37a,[0,1.67,0]);
-    addPart(g,new THREE.BoxGeometry(0.08,0.9,0.08),0x6f4a2c,[0.38,1.0,0]);
-  } else if(kind==='hero'){
-    addPart(g,new THREE.CylinderGeometry(0.25,0.25,0.16,16),0xf04a3e,[0,1.7,0]);
-    addPart(g,new THREE.BoxGeometry(0.34,0.12,0.28),0xf04a3e,[0,1.64,0.08]);
-    addPart(g,new THREE.BoxGeometry(0.34,0.38,0.31),0x2d61d5,[0,0.89,0]);
-  }
-  g.scale.setScalar(kind==='queen'?1.05:0.9);
-  return g;
-}
-function makeDragon(){
-  const g=new THREE.Group();
-  addPart(g,new THREE.SphereGeometry(0.42,16,12),0x4caf50,[0,1.05,0]);
-  addPart(g,new THREE.ConeGeometry(0.38,1.1,10),0x439a46,[0,0.62,-0.42],[Math.PI/2,0,0]);
-  const head=addPart(g,new THREE.SphereGeometry(0.31,14,10),0x58bf55,[0,1.16,0.48]);
-  addPart(g,new THREE.ConeGeometry(0.09,0.35,8),0xf0e0a0,[-0.18,1.42,0.53]);
-  addPart(g,new THREE.ConeGeometry(0.09,0.35,8),0xf0e0a0,[0.18,1.42,0.53]);
-  const wingGeo=new THREE.ConeGeometry(0.42,0.9,3);
-  const wl=addPart(g,wingGeo,0x2f7f43,[-0.48,1.05,-0.05],[0,0,-1.15]);
-  const wr=addPart(g,wingGeo,0x2f7f43,[0.48,1.05,-0.05],[0,0,1.15]);
-  g.userData.wings=[wl,wr];g.userData.head=head;g.scale.setScalar(1.15);return g;
-}
+const {makeHumanoid,makeDragon}=window.KUKAC_ACTORS.create({THREE,mat});
 function setCrowdMood(mood,duration=1800){
   gameState.world.crowdMood=mood;gameState.world.crowdMoodUntil=performance.now()+duration;
 }
@@ -394,36 +313,10 @@ function updateParticles(){
     if(p.userData.life<=0)particles.remove(p);
   });
 }
-function startAudioLayers(){
-  if(!audioCtx||gameState.audio.ambience)return;
-  const makeLayer=(freq,type,vol)=>{
-    const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.value=freq;g.gain.value=vol;o.connect(g);g.connect(audioCtx.destination);o.start();return{osc:o,gain:g};
-  };
-  gameState.audio.ambience=makeLayer(72,'triangle',0.006);
-  gameState.audio.tension=makeLayer(146,'sine',0.0008);
-}
-function updateAudioLayers(){
-  if(!gameState.audio.ambience)return;
-  const now=audioCtx.currentTime;
-  const tension=Math.max(0,(3-gameState.player.lifeCount))*0.002+(gameState.progression.royalOn? 0.003:0)+(gameState.progression.stolenCollectible? 0.004:0);
-  gameState.audio.tension.gain.gain.setTargetAtTime(tension,now,0.18);
-  gameState.audio.ambience.gain.gain.setTargetAtTime(gameState.session.soundEnabled? 0.006:0,now,0.18);
-}
-function sound(type){
-  if(!gameState.session.soundEnabled)return;
-  if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-  const now=audioCtx.currentTime;
-  const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();
-  osc.connect(gain);gain.connect(audioCtx.destination);
-  const sets={
-    eat:[520,850,0.11,'square'],coin:[900,1500,0.16,'sine'],turn:[180,220,0.025,'square'],
-    level:[330,880,0.45,'triangle'],over:[220,80,0.55,'sawtooth'],start:[260,660,0.24,'triangle'],
-    raid:[180,420,0.22,'square'],steal:[700,120,0.28,'sawtooth']
-  };
-  const s=sets[type]||sets.eat;osc.type=s[3];osc.frequency.setValueAtTime(s[0],now);osc.frequency.exponentialRampToValueAtTime(Math.max(40,s[1]),now+s[2]);
-  gain.gain.setValueAtTime(type==='turn'? 0.015:0.11,now);gain.gain.exponentialRampToValueAtTime(0.001,now+s[2]);
-  osc.start(now);osc.stop(now+s[2]);
-}
+const audio=window.KUKAC_AUDIO.create();
+function startAudioLayers(){audio.startLayers()}
+function updateAudioLayers(){audio.update({enabled:gameState.session.soundEnabled,lives:gameState.player.lifeCount,royal:gameState.progression.royalOn,stolen:!!gameState.progression.stolenCollectible})}
+function sound(type){audio.play(type,gameState.session.soundEnabled)}
 function flash(){const e=$('flash');e.classList.remove('go');void e.offsetWidth;e.classList.add('go')}
 function showCombo(txt){const e=$('gameState.session.comboCount');e.textContent=txt;e.classList.remove('show');void e.offsetWidth;e.classList.add('show')}
 function showEvent(txt,ms=2200){const e=$('eventPill');e.textContent=txt;e.classList.add('show');clearTimeout(e._timer);e._timer=setTimeout(()=>e.classList.remove('show'),ms)}
@@ -556,8 +449,7 @@ function togglePause(){
 }
 function toggleSound(){gameState.session.soundEnabled=!gameState.session.soundEnabled;$('soundBtn').textContent=gameState.session.soundEnabled?'🔊':'🔇';if(gameState.session.soundEnabled)sound('turn')}
 function startGame(){
-  if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-  if(audioCtx.state==='suspended')audioCtx.resume();startAudioLayers();
+  audio.resume();startAudioLayers();
   $('start').style.display='none';$('gameover').style.display='none';reset();gameState.session.isRunning=true;sound('start');
 }
 function restart(){ $('gameover').style.display='none';reset();gameState.session.isRunning=true;sound('start') }
