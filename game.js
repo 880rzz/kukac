@@ -68,6 +68,7 @@ function applyLanguage(lang){
   $('soundBtn').setAttribute('aria-label',lang==='de'?'Ton an/aus':lang==='tr'?'Sesi aç/kapat':lang==='uk'?'Увімкнути/вимкнути звук':lang==='hu'?'Hang ki/be':'Sound on/off');
   $('helpBtn').setAttribute('aria-label',lang==='de'?'Hilfe':lang==='tr'?'Yardım':lang==='uk'?'Допомога':lang==='hu'?'Súgó':'Help');
   $('pauseBtn').setAttribute('aria-label',t('pause'));
+  window.KUKAC_ACCOUNT?.refreshLabels?.();
 }
 
 $('best').textContent=best;
