@@ -1,6 +1,6 @@
 window.KUKAC_I18N={
 de:{
-scoreLabel:'Punkte',levelLabel:'Level',bestLabel:'Rekord',levelBanner:'LEVEL',nextLevel:'Nächstes Level:',pointsWord:'Punkte',ruleMove:'↔ BEWEGEN',ruleStar:'⭐ STERN HOLEN',ruleSurvive:'⚠ NICHT CRASHEN',eventRoyal:'KÖNIGLICHES EVENT',eventDragon:'DRACHENANGRIFF',starSaved:'STERN GERETTET +20',boostBonus:'BOOST-BONUS',lifeLost:'LEBEN VERLOREN',bounce:'ABGEPRALLT',lastLife:'LETZTES LEBEN',shieldHit:'SCHILD',royalStar:'KÖNIGSSTERN',
+scoreLabel:'Punkte',stages:['WIESE','STADION','KÖNIGSARENA','DRACHENTAL','NACHTARENA'],levelLabel:'Level',bestLabel:'Rekord',levelBanner:'LEVEL',nextLevel:'Nächstes Level:',pointsWord:'Punkte',ruleMove:'↔ BEWEGEN',ruleStar:'⭐ STERN HOLEN',ruleSurvive:'⚠ NICHT CRASHEN',eventRoyal:'KÖNIGLICHES EVENT',eventDragon:'DRACHENANGRIFF',starSaved:'STERN GERETTET +20',boostBonus:'BOOST-BONUS',lifeLost:'LEBEN VERLOREN',bounce:'ABGEPRALLT',lastLife:'LETZTES LEBEN',shieldHit:'SCHILD',royalStar:'KÖNIGSSTERN',
 intro:'Die klassische Snake-Idee als modernes 3D-Arcade-Spiel. Sammle Sterne und Münzen, weiche Hindernissen aus, baue Combos auf und erreiche immer schnellere Levels.',
 keyboardTitle:'⌨️ Tastatur',keyboardText:'Pfeile oder WASD · Leertaste = Pause · Shift = Boost',mobileTitle:'📱 Mobil',mobileText:'Richtungstasten oder Wischen · BOOST = Beschleunigen',starTitle:'⭐ Stern',starText:'+10 Punkte, der Wurm wird länger und die Combo steigt.',coinTitle:'🪙 Goldmünze',coinText:'Seltener Bonus: +25 Punkte, ohne Wachstum.',
 startBtn:'SPIEL STARTEN',helpBtnText:'Vollständige Anleitung',helpTitle:'Wie <em>spielst du?</em>',
@@ -8,7 +8,7 @@ helpGoal:'<b>Ziel:</b> Sammle so viele Punkte wie möglich, ohne gegen Wände, H
 raidDragon:'DRACHE!',raidInvader:'EINDRINGLING!',stolen:'GESTOHLEN! -5',collision:'TREFFER!',pause:'PAUSE',go:'LOS',result:(s,l,b)=>`Punkte: <b>${s}</b> · Level: <b>${l}</b> · Rekord: <b>${b}</b>`
 },
 tr:{
-scoreLabel:'Puan',levelLabel:'Seviye',bestLabel:'Rekor',levelBanner:'SEVİYE',nextLevel:'Sonraki seviye:',pointsWord:'puan',ruleMove:'↔ HAREKET',ruleStar:'⭐ YILDIZI AL',ruleSurvive:'⚠ ÇARPMA',eventRoyal:'KRALİYET ETKİNLİĞİ',eventDragon:'EJDERHA SALDIRISI',starSaved:'YILDIZ KURTARILDI +20',boostBonus:'BOOST BONUSU',lifeLost:'CAN KAYBEDİLDİ',bounce:'SEKME',lastLife:'SON CAN',shieldHit:'KALKAN',royalStar:'KRALİYET YILDIZI',
+scoreLabel:'Puan',stages:['ÇAYIR','STADYUM','KRALİYET ARENASI','EJDERHA VADİSİ','GECE ARENASI'],levelLabel:'Seviye',bestLabel:'Rekor',levelBanner:'SEVİYE',nextLevel:'Sonraki seviye:',pointsWord:'puan',ruleMove:'↔ HAREKET',ruleStar:'⭐ YILDIZI AL',ruleSurvive:'⚠ ÇARPMA',eventRoyal:'KRALİYET ETKİNLİĞİ',eventDragon:'EJDERHA SALDIRISI',starSaved:'YILDIZ KURTARILDI +20',boostBonus:'BOOST BONUSU',lifeLost:'CAN KAYBEDİLDİ',bounce:'SEKME',lastLife:'SON CAN',shieldHit:'KALKAN',royalStar:'KRALİYET YILDIZI',
 intro:'Klasik Snake fikrinin modern 3D arcade yorumu. Yıldız ve para topla, engellerden kaç, kombo yap ve giderek hızlanan seviyelere ulaş.',
 keyboardTitle:'⌨️ Klavye',keyboardText:'Ok tuşları veya WASD · Boşluk = Duraklat · Shift = Hızlan',mobileTitle:'📱 Mobil',mobileText:'Yön tuşları veya kaydırma · BOOST = Hızlan',starTitle:'⭐ Yıldız',starText:'+10 puan, solucan uzar ve kombo artar.',coinTitle:'🪙 Altın para',coinText:'Nadir bonus: +25 puan, uzatma yok.',
 startBtn:'OYUNU BAŞLAT',helpBtnText:'Tam kullanım kılavuzu',helpTitle:'Nasıl <em>oynanır?</em>',
@@ -16,7 +16,7 @@ helpGoal:'<b>Amaç:</b> Duvara, engele veya kendi gövdende çarpmadan olabildi�
 raidDragon:'EJDERHA!',raidInvader:'DAVETSİZ!',stolen:'ÇALINDI! -5',collision:'ÇARPIŞMA!',pause:'DURAKLAT',go:'DEVAM',result:(s,l,b)=>`Puan: <b>${s}</b> · Seviye: <b>${l}</b> · Rekor: <b>${b}</b>`
 },
 uk:{
-scoreLabel:'Очки',levelLabel:'Рівень',bestLabel:'Рекорд',levelBanner:'РІВЕНЬ',nextLevel:'Наступний рівень:',pointsWord:'очок',ruleMove:'↔ РУХАЙСЯ',ruleStar:'⭐ ВІЗЬМИ ЗІРКУ',ruleSurvive:'⚠ НЕ ВРІЖСЯ',eventRoyal:'КОРОЛІВСЬКА ПОДІЯ',eventDragon:'АТАКА ДРАКОНА',starSaved:'ЗІРКУ ВРЯТОВАНО +20',boostBonus:'BOOST-БОНУС',lifeLost:'ЖИТТЯ ВТРАЧЕНО',bounce:'ВІДСКОК',lastLife:'ОСТАННЄ ЖИТТЯ',shieldHit:'ЩИТ',royalStar:'КОРОЛІВСЬКА ЗІРКА',
+scoreLabel:'Очки',stages:['ЛУКА','СТАДІОН','КОРОЛІВСЬКА АРЕНА','ДОЛИНА ДРАКОНА','НІЧНА АРЕНА'],levelLabel:'Рівень',bestLabel:'Рекорд',levelBanner:'РІВЕНЬ',nextLevel:'Наступний рівень:',pointsWord:'очок',ruleMove:'↔ РУХАЙСЯ',ruleStar:'⭐ ВІЗЬМИ ЗІРКУ',ruleSurvive:'⚠ НЕ ВРІЖСЯ',eventRoyal:'КОРОЛІВСЬКА ПОДІЯ',eventDragon:'АТАКА ДРАКОНА',starSaved:'ЗІРКУ ВРЯТОВАНО +20',boostBonus:'BOOST-БОНУС',lifeLost:'ЖИТТЯ ВТРАЧЕНО',bounce:'ВІДСКОК',lastLife:'ОСТАННЄ ЖИТТЯ',shieldHit:'ЩИТ',royalStar:'КОРОЛІВСЬКА ЗІРКА',
 intro:'Сучасна 3D-аркадна версія класичної Snake. Збирай зірки й монети, оминай перешкоди, будуй комбо та переходь на дедалі швидші рівні.',
 keyboardTitle:'⌨️ Клавіатура',keyboardText:'Стрілки або WASD · Пробіл = пауза · Shift = прискорення',mobileTitle:'📱 Мобільний',mobileText:'Кнопки напрямку або свайп · BOOST = прискорення',starTitle:'⭐ Зірка',starText:'+10 очок, черв’як стає довшим, а комбо зростає.',coinTitle:'🪙 Золота монета',coinText:'Рідкісний бонус: +25 очок без збільшення довжини.',
 startBtn:'ПОЧАТИ ГРУ',helpBtnText:'Повна інструкція',helpTitle:'Як <em>грати?</em>',
@@ -24,7 +24,7 @@ helpGoal:'<b>Мета:</b> Набери якомога більше очок, н
 raidDragon:'ДРАКОН!',raidInvader:'ПОРУШНИК!',stolen:'ВКРАЛИ! -5',collision:'ЗІТКНЕННЯ!',pause:'ПАУЗА',go:'СТАРТ',result:(s,l,b)=>`Очки: <b>${s}</b> · Рівень: <b>${l}</b> · Рекорд: <b>${b}</b>`
 },
 hu:{
-scoreLabel:'Pont',levelLabel:'Szint',bestLabel:'Rekord',levelBanner:'SZINT',nextLevel:'Következő szint:',pointsWord:'pont',ruleMove:'↔ MOZOGJ',ruleStar:'⭐ SZEREZD MEG',ruleSurvive:'⚠ NE ÜTKÖZZ',eventRoyal:'KIRÁLYI ESEMÉNY',eventDragon:'SÁRKÁNYTÁMADÁS',starSaved:'CSILLAG MEGMENTVE +20',boostBonus:'BOOST BÓNUSZ',lifeLost:'ÉLET ELVESZETT',bounce:'LEPATTANÁS',lastLife:'UTOLSÓ ÉLET',shieldHit:'PAJZS',royalStar:'KIRÁLYI CSILLAG',
+scoreLabel:'Pont',stages:['RÉT','STADION','KIRÁLYI ARÉNA','SÁRKÁNYVÖLGY','ÉJSZAKAI ARÉNA'],levelLabel:'Szint',bestLabel:'Rekord',levelBanner:'SZINT',nextLevel:'Következő szint:',pointsWord:'pont',ruleMove:'↔ MOZOGJ',ruleStar:'⭐ SZEREZD MEG',ruleSurvive:'⚠ NE ÜTKÖZZ',eventRoyal:'KIRÁLYI ESEMÉNY',eventDragon:'SÁRKÁNYTÁMADÁS',starSaved:'CSILLAG MEGMENTVE +20',boostBonus:'BOOST BÓNUSZ',lifeLost:'ÉLET ELVESZETT',bounce:'LEPATTANÁS',lastLife:'UTOLSÓ ÉLET',shieldHit:'PAJZS',royalStar:'KIRÁLYI CSILLAG',
 intro:'A klasszikus Snake modern, látványos 3D arcade újragondolása. Gyűjts csillagokat és érméket, kerüld az akadályokat, építs kombót és juss egyre gyorsabb szintekre.',
 keyboardTitle:'⌨️ Billentyűzet',keyboardText:'Nyilak vagy WASD · Space = szünet · Shift = boost',mobileTitle:'📱 Mobil',mobileText:'Iránygombok vagy húzás · BOOST = gyorsítás',starTitle:'⭐ Csillag',starText:'+10 pont, hosszabb leszel és nő a kombó.',coinTitle:'🪙 Arany érme',coinText:'Ritka bónusz: +25 pont, nem növeszt.',
 startBtn:'JÁTÉK INDÍTÁSA',helpBtnText:'Teljes használati útmutató',helpTitle:'Hogyan <em>játssz?</em>',
@@ -32,7 +32,7 @@ helpGoal:'<b>Cél:</b> Gyűjts minél több pontot anélkül, hogy falnak, akad�
 raidDragon:'SÁRKÁNY!',raidInvader:'BETOLAKODÓ!',stolen:'ELLOPTÁK! -5',collision:'ÜTKÖZÉS!',pause:'SZÜNET',go:'RAJT',result:(s,l,b)=>`Pontszám: <b>${s}</b> · Szint: <b>${l}</b> · Rekord: <b>${b}</b>`
 },
 en:{
-scoreLabel:'Score',levelLabel:'Level',bestLabel:'Best',levelBanner:'LEVEL',nextLevel:'Next level:',pointsWord:'points',ruleMove:'↔ MOVE',ruleStar:'⭐ GET THE STAR',ruleSurvive:'⚠ DON’T CRASH',eventRoyal:'ROYAL EVENT',eventDragon:'DRAGON ATTACK',starSaved:'STAR SAVED +20',boostBonus:'BOOST BONUS',lifeLost:'LIFE LOST',bounce:'BOUNCE',lastLife:'LAST LIFE',shieldHit:'SHIELD',royalStar:'ROYAL STAR',
+scoreLabel:'Score',stages:['MEADOW','STADIUM','ROYAL ARENA','DRAGON VALLEY','NIGHT ARENA'],levelLabel:'Level',bestLabel:'Best',levelBanner:'LEVEL',nextLevel:'Next level:',pointsWord:'points',ruleMove:'↔ MOVE',ruleStar:'⭐ GET THE STAR',ruleSurvive:'⚠ DON’T CRASH',eventRoyal:'ROYAL EVENT',eventDragon:'DRAGON ATTACK',starSaved:'STAR SAVED +20',boostBonus:'BOOST BONUS',lifeLost:'LIFE LOST',bounce:'BOUNCE',lastLife:'LAST LIFE',shieldHit:'SHIELD',royalStar:'ROYAL STAR',
 intro:'A modern 3D arcade take on classic Snake. Collect stars and coins, dodge obstacles, build combos and reach increasingly faster levels.',
 keyboardTitle:'⌨️ Keyboard',keyboardText:'Arrow keys or WASD · Space = pause · Shift = boost',mobileTitle:'📱 Mobile',mobileText:'Direction buttons or swipe · BOOST = speed up',starTitle:'⭐ Star',starText:'+10 points, you grow longer and your combo increases.',coinTitle:'🪙 Gold coin',coinText:'Rare bonus: +25 points without growing.',
 startBtn:'START GAME',helpBtnText:'Full instructions',helpTitle:'How to <em>play?</em>',
