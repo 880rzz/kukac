@@ -104,3 +104,34 @@ A fordítás kiterjed a HUD-ra, indítóképernyőre, használati útmutatóra, 
 ## Mobil és tablet
 
 A kezelőfelület külön reszponzív szabályokat kapott mobilra és tabletre. A nyelvválasztó, pontszám, kezelőgombok, D-pad és BOOST gomb kisebb kijelzőn is egymástól elkülönítve jelenik meg.
+
+
+## First-principles gameplay update
+
+A játék fő ciklusa most egyszerűbb és erősebb:
+
+- az első betolakodás csak két megszerzett csillag után oldódik fel
+- a betolakodók a közönség pozíciójából indulnak
+- a retro hősök és sárkányok csillagtolvajok
+- a katonák blokkoló/ütköző ellenfelek
+- az ellopott csillag nem tűnik el azonnal: a tolvaj magával viszi
+- a tolvaj elkapásával a csillag visszaszerezhető, +20 pontért
+- boost alatt megszerzett csillag extra kockázati bónuszt ad
+- 160 pontonként Royal Event indul két katonával
+- a 4. szinttől egyszeri Dragon Attack esemény aktiválódik
+- a kezdőképernyő csak a három alapfeladatot mutatja: mozogj, szerezd meg a csillagot, ne ütközz
+
+## Stabilitás és accessibility
+
+- háttérbe kerülő böngészőfül automatikusan szünetelteti a játékot
+- orientation change után újraszámolja a viewportot
+- tablet portré/landscape kamera külön igazodik
+- `prefers-reduced-motion` támogatás
+- Three.js betöltési hiba esetén értelmes fallback üzenet jelenik meg
+
+## Automatikus QA
+
+A repó két GitHub Actions ellenőrzést tartalmaz:
+
+- `.github/workflows/smoke.yml` — HTML/JavaScript és alapfunkciók statikus smoke-checkje
+- `.github/workflows/browser-qa.yml` — headless Chromium teszt desktop, tablet és mobil viewporton, nyelvváltással, játékindítással és képernyőképes artifactokkal
