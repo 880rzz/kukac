@@ -3,6 +3,16 @@
 'use strict';
 if(!window.THREE){document.body.innerHTML='<div style="padding:40px;color:white;font-family:system-ui">3D engine could not be loaded. Please check your connection and reload.</div>';return}
 const GRID=20, HALF=GRID/2, LEVEL_STEP=80;
+const params=new URLSearchParams(location.search);
+const qaMode=params.get('qa')==='1';
+let rngSeed=Number(params.get('seed')||0)>>>0;
+function rand(){
+  if(!rngSeed)return rand();
+  rngSeed=(rngSeed+0x6D2B79F5)>>>0;
+  let t=rngSeed;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);
+  return ((t^t>>>14)>>>0)/4294967296;
+}
+function haptic(pattern){if(navigator.vibrate)navigator.vibrate(pattern)}
 const scene=new THREE.Scene();
 scene.fog=new THREE.Fog(0x80c8ff,20,58);
 const camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,.1,200);
@@ -25,6 +35,7 @@ const deco=new THREE.Group(); scene.add(deco);
 const particles=new THREE.Group(); scene.add(particles);
 const npcGroup=new THREE.Group(); scene.add(npcGroup);
 const crowdGroup=new THREE.Group(); scene.add(crowdGroup);
+const starLight=new THREE.PointLight(0xffd34d,1.8,8,2);starLight.visible=false;scene.add(starLight);
 
 let snake=[], food=null, coin=null, obstacles=[], direction={x:1,z:0}, nextDirection={x:1,z:0};
 let score=0, level=1, best=Number(localStorage.getItem('kukac3d-best')||0);
@@ -32,49 +43,54 @@ let running=false, paused=false, soundOn=true, dead=false, combo=0, comboTimer=0
 let baseInterval=155, boosting=false, shake=0, audioCtx=null;
 let npcs=[], crowd=[], nextNpcRaid=Infinity;
 let starsCollected=0, invasionUnlocked=false, stolenStar=null, royalActive=false, royalUntil=0, nextRoyalScore=160, dragonEventDone=false;
-let lives=5, firstLifeBounces=3, invulnerableUntil=0;
+const gameState={
+  player:{lifeCount:5,shieldCharges:3,invulnerableUntilMs:0},
+  world:{crowdMood:'calm',crowdMoodUntil:0},
+  audio:{ambience:null,tension:null},
+  qa:{enabled:qaMode}
+};
 
 const $=id=>document.getElementById(id);
 
 const I18N={
 de:{
-scoreLabel:'Punkte',levelLabel:'Level',bestLabel:'Rekord',levelBanner:'LEVEL',nextLevel:'Nächstes Level:',pointsWord:'Punkte',ruleMove:'↔ BEWEGEN',ruleStar:'⭐ STERN HOLEN',ruleSurvive:'⚠ NICHT CRASHEN',eventRoyal:'KÖNIGLICHES EVENT',eventDragon:'DRACHENANGRIFF',starSaved:'STERN GERETTET +20',boostBonus:'BOOST-BONUS',lifeLost:'LEBEN VERLOREN',bounce:'ABGEPRALLT',lastLife:'LETZTES LEBEN',
+scoreLabel:'Punkte',levelLabel:'Level',bestLabel:'Rekord',levelBanner:'LEVEL',nextLevel:'Nächstes Level:',pointsWord:'Punkte',ruleMove:'↔ BEWEGEN',ruleStar:'⭐ STERN HOLEN',ruleSurvive:'⚠ NICHT CRASHEN',eventRoyal:'KÖNIGLICHES EVENT',eventDragon:'DRACHENANGRIFF',starSaved:'STERN GERETTET +20',boostBonus:'BOOST-BONUS',lifeLost:'LEBEN VERLOREN',bounce:'ABGEPRALLT',lastLife:'LETZTES LEBEN',shieldHit:'SCHILD',royalStar:'KÖNIGSSTERN',
 intro:'Die klassische Snake-Idee als modernes 3D-Arcade-Spiel. Sammle Sterne und Münzen, weiche Hindernissen aus, baue Combos auf und erreiche immer schnellere Levels.',
 keyboardTitle:'⌨️ Tastatur',keyboardText:'Pfeile oder WASD · Leertaste = Pause · Shift = Boost',mobileTitle:'📱 Mobil',mobileText:'Richtungstasten oder Wischen · BOOST = Beschleunigen',starTitle:'⭐ Stern',starText:'+10 Punkte, der Wurm wird länger und die Combo steigt.',coinTitle:'🪙 Goldmünze',coinText:'Seltener Bonus: +25 Punkte, ohne Wachstum.',
 startBtn:'SPIEL STARTEN',helpBtnText:'Vollständige Anleitung',helpTitle:'Wie <em>spielst du?</em>',
-helpGoal:'<b>Ziel:</b> Sammle so viele Punkte wie möglich, ohne gegen Wände, Hindernisse oder dich selbst zu stoßen.',helpScore:'<b>Punkte:</b> Stern +10, seltene Goldmünze +25. Schnelles Sammeln baut einen Combo-Bonus auf.',helpLevels:'<b>Levels:</b> Alle 80 Punkte beginnt ein neues Level. Tempo und Hindernisse nehmen zu.',helpBoost:'<b>Boost:</b> Shift oder BOOST auf Mobilgeräten. Schneller, aber riskanter.',helpControls:'<b>Steuerung:</b> Pfeile/WASD, D-Pad oder Wischen. Leertaste: Pause, R: Neustart, M: Ton.',helpInvaders:'<b>Eindringlinge:</b> Soldaten, Drachen und Retro-Helden laufen aufs Feld. Du hast 5 Leben. Beim ersten Leben schützen dich 3 Abpraller; danach kostet jeder schwere Treffer ein Leben.',helpRecord:'<b>Rekord:</b> Der Browser speichert deinen Bestwert lokal.',understood:'VERSTANDEN',gameOverTitle:'SPIEL <em>VORBEI</em>',restartBtn:'NOCHMAL',
+helpGoal:'<b>Ziel:</b> Sammle so viele Punkte wie möglich, ohne gegen Wände, Hindernisse oder dich selbst zu stoßen.',helpScore:'<b>Punkte:</b> Stern +10, seltene Goldmünze +25. Schnelles Sammeln baut einen Combo-Bonus auf.',helpLevels:'<b>Levels:</b> Alle 80 Punkte beginnt ein neues Level. Tempo und Hindernisse nehmen zu.',helpBoost:'<b>Boost:</b> Shift oder BOOST auf Mobilgeräten. Schneller, aber riskanter.',helpControls:'<b>Steuerung:</b> Pfeile/WASD, D-Pad oder Wischen. Leertaste: Pause, R: Neustart, M: Ton.',helpInvaders:'<b>Eindringlinge:</b> Soldaten, Drachen und Retro-Helden laufen aufs Feld. Du hast 5 Leben. Beim ersten Leben schützen dich 3 Schilde; danach kostet jeder schwere Treffer ein Leben.',helpRecord:'<b>Rekord:</b> Der Browser speichert deinen Bestwert lokal.',understood:'VERSTANDEN',gameOverTitle:'SPIEL <em>VORBEI</em>',restartBtn:'NOCHMAL',
 raidDragon:'DRACHE!',raidInvader:'EINDRINGLING!',stolen:'GESTOHLEN! -5',collision:'TREFFER!',pause:'PAUSE',go:'LOS',result:(s,l,b)=>`Punkte: <b>${s}</b> · Level: <b>${l}</b> · Rekord: <b>${b}</b>`
 },
 tr:{
-scoreLabel:'Puan',levelLabel:'Seviye',bestLabel:'Rekor',levelBanner:'SEVİYE',nextLevel:'Sonraki seviye:',pointsWord:'puan',ruleMove:'↔ HAREKET',ruleStar:'⭐ YILDIZI AL',ruleSurvive:'⚠ ÇARPMA',eventRoyal:'KRALİYET ETKİNLİĞİ',eventDragon:'EJDERHA SALDIRISI',starSaved:'YILDIZ KURTARILDI +20',boostBonus:'BOOST BONUSU',lifeLost:'CAN KAYBEDİLDİ',bounce:'SEKME',lastLife:'SON CAN',
+scoreLabel:'Puan',levelLabel:'Seviye',bestLabel:'Rekor',levelBanner:'SEVİYE',nextLevel:'Sonraki seviye:',pointsWord:'puan',ruleMove:'↔ HAREKET',ruleStar:'⭐ YILDIZI AL',ruleSurvive:'⚠ ÇARPMA',eventRoyal:'KRALİYET ETKİNLİĞİ',eventDragon:'EJDERHA SALDIRISI',starSaved:'YILDIZ KURTARILDI +20',boostBonus:'BOOST BONUSU',lifeLost:'CAN KAYBEDİLDİ',bounce:'SEKME',lastLife:'SON CAN',shieldHit:'KALKAN',royalStar:'KRALİYET YILDIZI',
 intro:'Klasik Snake fikrinin modern 3D arcade yorumu. Yıldız ve para topla, engellerden kaç, kombo yap ve giderek hızlanan seviyelere ulaş.',
 keyboardTitle:'⌨️ Klavye',keyboardText:'Ok tuşları veya WASD · Boşluk = Duraklat · Shift = Hızlan',mobileTitle:'📱 Mobil',mobileText:'Yön tuşları veya kaydırma · BOOST = Hızlan',starTitle:'⭐ Yıldız',starText:'+10 puan, solucan uzar ve kombo artar.',coinTitle:'🪙 Altın para',coinText:'Nadir bonus: +25 puan, uzatma yok.',
 startBtn:'OYUNU BAŞLAT',helpBtnText:'Tam kullanım kılavuzu',helpTitle:'Nasıl <em>oynanır?</em>',
-helpGoal:'<b>Amaç:</b> Duvara, engele veya kendi gövdende çarpmadan olabildiğince çok puan topla.',helpScore:'<b>Puanlama:</b> Yıldız +10, nadir altın para +25. Hızlı toplama kombo bonusu verir.',helpLevels:'<b>Seviyeler:</b> Her 80 puanda yeni seviye başlar. Hız ve engeller artar.',helpBoost:'<b>Boost:</b> Shift veya mobilde BOOST. Daha hızlı ama daha riskli.',helpControls:'<b>Kontrol:</b> Oklar/WASD, D-pad veya kaydırma. Boşluk: duraklat, R: yeniden başlat, M: ses.',helpInvaders:'<b>Davetsizler:</b> Askerler, ejderhalar ve retro kahramanlar sahaya girer. 5 canın var. İlk canda 3 sekme hakkı vardır; sonra her ağır çarpışma bir can götürür.',helpRecord:'<b>Rekor:</b> En yüksek skor tarayıcıda yerel olarak saklanır.',understood:'ANLADIM',gameOverTitle:'OYUN <em>BİTTİ</em>',restartBtn:'TEKRAR',
+helpGoal:'<b>Amaç:</b> Duvara, engele veya kendi gövdende çarpmadan olabildiğince çok puan topla.',helpScore:'<b>Puanlama:</b> Yıldız +10, nadir altın para +25. Hızlı toplama kombo bonusu verir.',helpLevels:'<b>Seviyeler:</b> Her 80 puanda yeni seviye başlar. Hız ve engeller artar.',helpBoost:'<b>Boost:</b> Shift veya mobilde BOOST. Daha hızlı ama daha riskli.',helpControls:'<b>Kontrol:</b> Oklar/WASD, D-pad veya kaydırma. Boşluk: duraklat, R: yeniden başlat, M: ses.',helpInvaders:'<b>Davetsizler:</b> Askerler, ejderhalar ve retro kahramanlar sahaya girer. 5 canın var. İlk canda 3 kalkan hakkın vardır; sonra her ağır çarpışma bir can götürür.',helpRecord:'<b>Rekor:</b> En yüksek skor tarayıcıda yerel olarak saklanır.',understood:'ANLADIM',gameOverTitle:'OYUN <em>BİTTİ</em>',restartBtn:'TEKRAR',
 raidDragon:'EJDERHA!',raidInvader:'DAVETSİZ!',stolen:'ÇALINDI! -5',collision:'ÇARPIŞMA!',pause:'DURAKLAT',go:'DEVAM',result:(s,l,b)=>`Puan: <b>${s}</b> · Seviye: <b>${l}</b> · Rekor: <b>${b}</b>`
 },
 uk:{
-scoreLabel:'Очки',levelLabel:'Рівень',bestLabel:'Рекорд',levelBanner:'РІВЕНЬ',nextLevel:'Наступний рівень:',pointsWord:'очок',ruleMove:'↔ РУХАЙСЯ',ruleStar:'⭐ ВІЗЬМИ ЗІРКУ',ruleSurvive:'⚠ НЕ ВРІЖСЯ',eventRoyal:'КОРОЛІВСЬКА ПОДІЯ',eventDragon:'АТАКА ДРАКОНА',starSaved:'ЗІРКУ ВРЯТОВАНО +20',boostBonus:'BOOST-БОНУС',lifeLost:'ЖИТТЯ ВТРАЧЕНО',bounce:'ВІДСКОК',lastLife:'ОСТАННЄ ЖИТТЯ',
+scoreLabel:'Очки',levelLabel:'Рівень',bestLabel:'Рекорд',levelBanner:'РІВЕНЬ',nextLevel:'Наступний рівень:',pointsWord:'очок',ruleMove:'↔ РУХАЙСЯ',ruleStar:'⭐ ВІЗЬМИ ЗІРКУ',ruleSurvive:'⚠ НЕ ВРІЖСЯ',eventRoyal:'КОРОЛІВСЬКА ПОДІЯ',eventDragon:'АТАКА ДРАКОНА',starSaved:'ЗІРКУ ВРЯТОВАНО +20',boostBonus:'BOOST-БОНУС',lifeLost:'ЖИТТЯ ВТРАЧЕНО',bounce:'ВІДСКОК',lastLife:'ОСТАННЄ ЖИТТЯ',shieldHit:'ЩИТ',royalStar:'КОРОЛІВСЬКА ЗІРКА',
 intro:'Сучасна 3D-аркадна версія класичної Snake. Збирай зірки й монети, оминай перешкоди, будуй комбо та переходь на дедалі швидші рівні.',
 keyboardTitle:'⌨️ Клавіатура',keyboardText:'Стрілки або WASD · Пробіл = пауза · Shift = прискорення',mobileTitle:'📱 Мобільний',mobileText:'Кнопки напрямку або свайп · BOOST = прискорення',starTitle:'⭐ Зірка',starText:'+10 очок, черв’як стає довшим, а комбо зростає.',coinTitle:'🪙 Золота монета',coinText:'Рідкісний бонус: +25 очок без збільшення довжини.',
 startBtn:'ПОЧАТИ ГРУ',helpBtnText:'Повна інструкція',helpTitle:'Як <em>грати?</em>',
-helpGoal:'<b>Мета:</b> Набери якомога більше очок, не врізаючись у стіни, перешкоди чи власне тіло.',helpScore:'<b>Очки:</b> Зірка +10, рідкісна золота монета +25. Швидкий збір дає бонус-комбо.',helpLevels:'<b>Рівні:</b> Кожні 80 очок починається новий рівень. Швидкість і кількість перешкод зростають.',helpBoost:'<b>Boost:</b> Shift або кнопка BOOST на мобільному. Швидше, але ризикованіше.',helpControls:'<b>Керування:</b> Стрілки/WASD, D-pad або свайп. Пробіл: пауза, R: рестарт, M: звук.',helpInvaders:'<b>Порушники:</b> Солдати, дракони й ретро-герої вибігають на поле. Є 5 життів. На першому житті доступні 3 відскоки; далі кожне серйозне зіткнення забирає життя.',helpRecord:'<b>Рекорд:</b> Найкращий результат зберігається локально у браузері.',understood:'ЗРОЗУМІЛО',gameOverTitle:'ГРУ <em>ЗАВЕРШЕНО</em>',restartBtn:'ЩЕ РАЗ',
+helpGoal:'<b>Мета:</b> Набери якомога більше очок, не врізаючись у стіни, перешкоди чи власне тіло.',helpScore:'<b>Очки:</b> Зірка +10, рідкісна золота монета +25. Швидкий збір дає бонус-комбо.',helpLevels:'<b>Рівні:</b> Кожні 80 очок починається новий рівень. Швидкість і кількість перешкод зростають.',helpBoost:'<b>Boost:</b> Shift або кнопка BOOST на мобільному. Швидше, але ризикованіше.',helpControls:'<b>Керування:</b> Стрілки/WASD, D-pad або свайп. Пробіл: пауза, R: рестарт, M: звук.',helpInvaders:'<b>Порушники:</b> Солдати, дракони й ретро-герої вибігають на поле. Є 5 життів. На першому житті тебе захищають 3 щити; далі кожне серйозне зіткнення забирає життя.',helpRecord:'<b>Рекорд:</b> Найкращий результат зберігається локально у браузері.',understood:'ЗРОЗУМІЛО',gameOverTitle:'ГРУ <em>ЗАВЕРШЕНО</em>',restartBtn:'ЩЕ РАЗ',
 raidDragon:'ДРАКОН!',raidInvader:'ПОРУШНИК!',stolen:'ВКРАЛИ! -5',collision:'ЗІТКНЕННЯ!',pause:'ПАУЗА',go:'СТАРТ',result:(s,l,b)=>`Очки: <b>${s}</b> · Рівень: <b>${l}</b> · Рекорд: <b>${b}</b>`
 },
 hu:{
-scoreLabel:'Pont',levelLabel:'Szint',bestLabel:'Rekord',levelBanner:'SZINT',nextLevel:'Következő szint:',pointsWord:'pont',ruleMove:'↔ MOZOGJ',ruleStar:'⭐ SZEREZD MEG',ruleSurvive:'⚠ NE ÜTKÖZZ',eventRoyal:'KIRÁLYI ESEMÉNY',eventDragon:'SÁRKÁNYTÁMADÁS',starSaved:'CSILLAG MEGMENTVE +20',boostBonus:'BOOST BÓNUSZ',lifeLost:'ÉLET ELVESZETT',bounce:'LEPATTANÁS',lastLife:'UTOLSÓ ÉLET',
+scoreLabel:'Pont',levelLabel:'Szint',bestLabel:'Rekord',levelBanner:'SZINT',nextLevel:'Következő szint:',pointsWord:'pont',ruleMove:'↔ MOZOGJ',ruleStar:'⭐ SZEREZD MEG',ruleSurvive:'⚠ NE ÜTKÖZZ',eventRoyal:'KIRÁLYI ESEMÉNY',eventDragon:'SÁRKÁNYTÁMADÁS',starSaved:'CSILLAG MEGMENTVE +20',boostBonus:'BOOST BÓNUSZ',lifeLost:'ÉLET ELVESZETT',bounce:'LEPATTANÁS',lastLife:'UTOLSÓ ÉLET',shieldHit:'PAJZS',royalStar:'KIRÁLYI CSILLAG',
 intro:'A klasszikus Snake modern, látványos 3D arcade újragondolása. Gyűjts csillagokat és érméket, kerüld az akadályokat, építs kombót és juss egyre gyorsabb szintekre.',
 keyboardTitle:'⌨️ Billentyűzet',keyboardText:'Nyilak vagy WASD · Space = szünet · Shift = boost',mobileTitle:'📱 Mobil',mobileText:'Iránygombok vagy húzás · BOOST = gyorsítás',starTitle:'⭐ Csillag',starText:'+10 pont, hosszabb leszel és nő a kombó.',coinTitle:'🪙 Arany érme',coinText:'Ritka bónusz: +25 pont, nem növeszt.',
 startBtn:'JÁTÉK INDÍTÁSA',helpBtnText:'Teljes használati útmutató',helpTitle:'Hogyan <em>játssz?</em>',
-helpGoal:'<b>Cél:</b> Gyűjts minél több pontot anélkül, hogy falnak, akadálynak vagy saját magadnak ütköznél.',helpScore:'<b>Pontozás:</b> Csillag +10, ritka arany érme +25. Gyors gyűjtéssel kombóbónuszt építesz.',helpLevels:'<b>Szintek:</b> 80 pontonként új szint jön. Nő a sebesség és az akadályok száma.',helpBoost:'<b>Boost:</b> Shift vagy mobilon BOOST. Gyorsabb, de kockázatosabb.',helpControls:'<b>Irányítás:</b> Nyilak/WASD, D-pad vagy húzógesztus. Space: szünet, R: újrakezdés, M: hang.',helpInvaders:'<b>Betolakodók:</b> Katonák, sárkányok és retro hősök berohannak. 5 életed van. Az első életnél 3 lepattanás véd, utána minden komoly ütközés egy életet vesz le.',helpRecord:'<b>Rekord:</b> A böngésző helyben elmenti a legjobb pontszámot.',understood:'ÉRTEM',gameOverTitle:'JÁTÉK <em>VÉGE</em>',restartBtn:'ÚJRA',
+helpGoal:'<b>Cél:</b> Gyűjts minél több pontot anélkül, hogy falnak, akadálynak vagy saját magadnak ütköznél.',helpScore:'<b>Pontozás:</b> Csillag +10, ritka arany érme +25. Gyors gyűjtéssel kombóbónuszt építesz.',helpLevels:'<b>Szintek:</b> 80 pontonként új szint jön. Nő a sebesség és az akadályok száma.',helpBoost:'<b>Boost:</b> Shift vagy mobilon BOOST. Gyorsabb, de kockázatosabb.',helpControls:'<b>Irányítás:</b> Nyilak/WASD, D-pad vagy húzógesztus. Space: szünet, R: újrakezdés, M: hang.',helpInvaders:'<b>Betolakodók:</b> Katonák, sárkányok és retro hősök berohannak. 5 életed van. Az első életnél 3 pajzs véd, utána minden komoly ütközés egy életet vesz le.',helpRecord:'<b>Rekord:</b> A böngésző helyben elmenti a legjobb pontszámot.',understood:'ÉRTEM',gameOverTitle:'JÁTÉK <em>VÉGE</em>',restartBtn:'ÚJRA',
 raidDragon:'SÁRKÁNY!',raidInvader:'BETOLAKODÓ!',stolen:'ELLOPTÁK! -5',collision:'ÜTKÖZÉS!',pause:'SZÜNET',go:'RAJT',result:(s,l,b)=>`Pontszám: <b>${s}</b> · Szint: <b>${l}</b> · Rekord: <b>${b}</b>`
 },
 en:{
-scoreLabel:'Score',levelLabel:'Level',bestLabel:'Best',levelBanner:'LEVEL',nextLevel:'Next level:',pointsWord:'points',ruleMove:'↔ MOVE',ruleStar:'⭐ GET THE STAR',ruleSurvive:'⚠ DON’T CRASH',eventRoyal:'ROYAL EVENT',eventDragon:'DRAGON ATTACK',starSaved:'STAR SAVED +20',boostBonus:'BOOST BONUS',lifeLost:'LIFE LOST',bounce:'BOUNCE',lastLife:'LAST LIFE',
+scoreLabel:'Score',levelLabel:'Level',bestLabel:'Best',levelBanner:'LEVEL',nextLevel:'Next level:',pointsWord:'points',ruleMove:'↔ MOVE',ruleStar:'⭐ GET THE STAR',ruleSurvive:'⚠ DON’T CRASH',eventRoyal:'ROYAL EVENT',eventDragon:'DRAGON ATTACK',starSaved:'STAR SAVED +20',boostBonus:'BOOST BONUS',lifeLost:'LIFE LOST',bounce:'BOUNCE',lastLife:'LAST LIFE',shieldHit:'SHIELD',royalStar:'ROYAL STAR',
 intro:'A modern 3D arcade take on classic Snake. Collect stars and coins, dodge obstacles, build combos and reach increasingly faster levels.',
 keyboardTitle:'⌨️ Keyboard',keyboardText:'Arrow keys or WASD · Space = pause · Shift = boost',mobileTitle:'📱 Mobile',mobileText:'Direction buttons or swipe · BOOST = speed up',starTitle:'⭐ Star',starText:'+10 points, you grow longer and your combo increases.',coinTitle:'🪙 Gold coin',coinText:'Rare bonus: +25 points without growing.',
 startBtn:'START GAME',helpBtnText:'Full instructions',helpTitle:'How to <em>play?</em>',
-helpGoal:'<b>Goal:</b> Score as many points as possible without hitting walls, obstacles or yourself.',helpScore:'<b>Scoring:</b> Star +10, rare gold coin +25. Fast pickups build a combo bonus.',helpLevels:'<b>Levels:</b> A new level starts every 80 points. Speed and obstacles increase.',helpBoost:'<b>Boost:</b> Shift or BOOST on mobile. Faster, but riskier.',helpControls:'<b>Controls:</b> Arrows/WASD, D-pad or swipe. Space: pause, R: restart, M: sound.',helpInvaders:'<b>Invaders:</b> Soldiers, dragons and retro heroes enter the field. You have 5 lives. On the first life you get 3 free bounces; after that every major collision costs one life.',helpRecord:'<b>Best score:</b> Your browser stores the high score locally.',understood:'GOT IT',gameOverTitle:'GAME <em>OVER</em>',restartBtn:'AGAIN',
+helpGoal:'<b>Goal:</b> Score as many points as possible without hitting walls, obstacles or yourself.',helpScore:'<b>Scoring:</b> Star +10, rare gold coin +25. Fast pickups build a combo bonus.',helpLevels:'<b>Levels:</b> A new level starts every 80 points. Speed and obstacles increase.',helpBoost:'<b>Boost:</b> Shift or BOOST on mobile. Faster, but riskier.',helpControls:'<b>Controls:</b> Arrows/WASD, D-pad or swipe. Space: pause, R: restart, M: sound.',helpInvaders:'<b>Invaders:</b> Soldiers, dragons and retro heroes enter the field. You have 5 gameState.player.lifeCount. On the first life you get 3 shields; after that every major collision costs one life.',helpRecord:'<b>Best score:</b> Your browser stores the high score locally.',understood:'GOT IT',gameOverTitle:'GAME <em>OVER</em>',restartBtn:'AGAIN',
 raidDragon:'DRAGON!',raidInvader:'INVADER!',stolen:'STOLEN! -5',collision:'HIT!',pause:'PAUSE',go:'GO',result:(s,l,b)=>`Score: <b>${s}</b> · Level: <b>${l}</b> · Best: <b>${b}</b>`
 }
 };
@@ -133,17 +149,17 @@ function buildWorld(){
   for(let i=0;i<13;i++){
     const cloud=new THREE.Group();
     for(let p=0;p<3;p++){
-      const c=new THREE.Mesh(new THREE.SphereGeometry(.7+Math.random()*.5,12,10),mat(0xffffff,.95));
-      c.position.set((p-1)*.65,Math.random()*.2,0);cloud.add(c);
+      const c=new THREE.Mesh(new THREE.SphereGeometry(.7+rand()*.5,12,10),mat(0xffffff,.95));
+      c.position.set((p-1)*.65,rand()*.2,0);cloud.add(c);
     }
-    const a=i/13*Math.PI*2,r=22+Math.random()*9;
-    cloud.position.set(Math.cos(a)*r,7+Math.random()*6,Math.sin(a)*r);
-    cloud.scale.setScalar(.8+Math.random()*1.3);deco.add(cloud);
+    const a=i/13*Math.PI*2,r=22+rand()*9;
+    cloud.position.set(Math.cos(a)*r,7+rand()*6,Math.sin(a)*r);
+    cloud.scale.setScalar(.8+rand()*1.3);deco.add(cloud);
   }
   for(let i=0;i<14;i++){
-    const hill=new THREE.Mesh(new THREE.ConeGeometry(3+Math.random()*3,5+Math.random()*5,7),mat(i%2?0x5fae39:0x438c31,.9));
-    const a=i/14*Math.PI*2,r=18+Math.random()*7;
-    hill.position.set(Math.cos(a)*r,1,Math.sin(a)*r);hill.rotation.y=Math.random()*Math.PI;deco.add(hill);
+    const hill=new THREE.Mesh(new THREE.ConeGeometry(3+rand()*3,5+rand()*5,7),mat(i%2?0x5fae39:0x438c31,.9));
+    const a=i/14*Math.PI*2,r=18+rand()*7;
+    hill.position.set(Math.cos(a)*r,1,Math.sin(a)*r);hill.rotation.y=rand()*Math.PI;deco.add(hill);
   }
 }
 buildWorld();
@@ -192,6 +208,9 @@ function makeDragon(){
   const wr=addPart(g,wingGeo,0x2f7f43,[.48,1.05,-.05],[0,0,1.15]);
   g.userData.wings=[wl,wr];g.userData.head=head;g.scale.setScalar(1.15);return g;
 }
+function setCrowdMood(mood,duration=1800){
+  gameState.world.crowdMood=mood;gameState.world.crowdMoodUntil=performance.now()+duration;
+}
 function buildCrowd(){
   while(crowdGroup.children.length)crowdGroup.remove(crowdGroup.children[0]);
   crowd=[];const colors=[0xffd447,0x3d8bea,0xe85b4a,0x8f61d8,0x42b883];
@@ -212,14 +231,14 @@ function buildCrowd(){
   const dragon=makeDragon();dragon.position.set(8.5,4.6,-14);dragon.userData.phase=1.7;crowdGroup.add(dragon);crowd.push(dragon);
 }
 function crowdStartFor(kind){
-  const source=kind==='dragon'?crowd.find(x=>x.userData.kind==='dragon'||x.userData.wings):kind==='soldier'?crowd.find(x=>x.userData.kind==='soldier'):crowd.filter(x=>x.userData.kind==='fan')[Math.floor(Math.random()*Math.max(1,crowd.filter(x=>x.userData.kind==='fan').length))];
+  const source=kind==='dragon'?crowd.find(x=>x.userData.kind==='dragon'||x.userData.wings):kind==='soldier'?crowd.find(x=>x.userData.kind==='soldier'):crowd.filter(x=>x.userData.kind==='fan')[Math.floor(rand()*Math.max(1,crowd.filter(x=>x.userData.kind==='fan').length))];
   return source?source.position.clone():new THREE.Vector3(0,.1,-11.5);
 }
 function spawnNpcRaid(now,forcedKind=null){
   if(!running||paused||dead)return;
   let pool=level>=4?['hero','soldier','dragon']:level>=2?['hero','soldier']:['hero'];
   if(stolenStar)pool=['soldier'];
-  const kind=forcedKind||pool[Math.floor(Math.random()*pool.length)];
+  const kind=forcedKind||pool[Math.floor(rand()*pool.length)];
   const obj=kind==='dragon'?makeDragon():makeHumanoid(kind,kind==='hero'?0x38a169:0xb11f2b);
   const start=crowdStartFor(kind);
   if(kind!=='dragon')start.y=.1;
@@ -233,26 +252,32 @@ function spawnNpcRaid(now,forcedKind=null){
 }
 function triggerRoyalEvent(t){
   if(royalActive||dead)return;
-  royalActive=true;royalUntil=t+10000;nextRoyalScore+=160;showEvent(t('eventRoyal'),3200);sound('level');
+  royalActive=true;royalUntil=t+10000;nextRoyalScore+=160;showEvent(t('eventRoyal'),3200);sound('level');setCrowdMood('celebrate',3200);haptic([40,40,80]);
+  if(food){food.userData.royal=true;food.scale.setScalar(1.35);starLight.intensity=2.8;}
   const queen=crowd.find(x=>x.userData.kind==='queen');if(queen)queen.scale.setScalar(1.22);
   setTimeout(()=>{if(running&&!dead)spawnNpcRaid(performance.now(),'soldier')},650);
   setTimeout(()=>{if(running&&!dead)spawnNpcRaid(performance.now(),'soldier')},1200);
 }
 function triggerDragonEvent(t){
   if(dragonEventDone||level<4)return;
-  dragonEventDone=true;showEvent(t('eventDragon'),3200);sound('raid');
-  setTimeout(()=>{if(running&&!dead)spawnNpcRaid(performance.now(),'dragon')},500);
+  dragonEventDone=true;showEvent(t('eventDragon'),3200);sound('raid');setCrowdMood('danger',3500);haptic([80,50,80]);
+  const ring=new THREE.Mesh(new THREE.RingGeometry(.8,1.08,32),new THREE.MeshBasicMaterial({color:0xff4b35,transparent:true,opacity:.72,side:THREE.DoubleSide}));
+  ring.rotation.x=-Math.PI/2;const target=food?food.position:snake[0].position;ring.position.set(target.x,.08,target.z);scene.add(ring);
+  let pulse=0;const warn=setInterval(()=>{pulse++;ring.scale.setScalar(1+(pulse%2)*.35);ring.material.opacity=pulse%2?.35:.72},140);
+  setTimeout(()=>{clearInterval(warn);scene.remove(ring);if(running&&!dead)spawnNpcRaid(performance.now(),'dragon')},1100);
 }
 function updateNPCs(t){
+  if(t>gameState.world.crowdMoodUntil)gameState.world.crowdMood='calm';
+  const moodAmp=gameState.world.crowdMood==='celebrate'?1.35:gameState.world.crowdMood==='danger'?1.05:gameState.world.crowdMood==='tense'?.8:.55;
   crowd.forEach((f,i)=>{
     const a=f.userData.arms;
-    if(a){a[0].rotation.z=Math.sin(t*.006+(f.userData.phase||i))*.65;a[1].rotation.z=-Math.sin(t*.006+(f.userData.phase||i))*.65}
-    f.position.y=Math.abs(Math.sin(t*.004+(f.userData.phase||i)))*.08;
+    if(a){a[0].rotation.z=Math.sin(t*.007+(f.userData.phase||i))*moodAmp;a[1].rotation.z=-Math.sin(t*.007+(f.userData.phase||i))*moodAmp}
+    f.position.y=Math.abs(Math.sin(t*.005+(f.userData.phase||i)))*(.05+moodAmp*.06);
     if(f.userData.wings){f.userData.wings[0].rotation.y=Math.sin(t*.005)*.5;f.userData.wings[1].rotation.y=-Math.sin(t*.005)*.5;f.position.x=8.5+Math.sin(t*.0006)*4}
   });
   if(royalActive&&t>royalUntil){royalActive=false;const queen=crowd.find(x=>x.userData.kind==='queen');if(queen)queen.scale.setScalar(1.05)}
   if(invasionUnlocked&&running&&!paused&&!dead&&t>nextNpcRaid){
-    spawnNpcRaid(t);nextNpcRaid=t+Math.max(5000,9000-level*450)+Math.random()*2400;
+    spawnNpcRaid(t);nextNpcRaid=t+Math.max(5000,9000-level*450)+rand()*2400;
   }
   if(score>=nextRoyalScore)triggerRoyalEvent(t);
   triggerDragonEvent(t);
@@ -286,14 +311,14 @@ function updateNPCs(t){
       const dx=n.position.x-food.position.x,dz=n.position.z-food.position.z;
       if(Math.hypot(dx,dz)<1.0){
         d.state='escape';d.steal=true;d.stolenAt=t;stolenStar=food;food=null;
-        stolenStar.userData.thief=n;showCombo(t('stolen'));sound('steal');showEvent(t('stolen'),1700);
+        stolenStar.userData.thief=n;setCrowdMood('danger',1800);haptic([70,40,70]);showCombo(t('stolen'));sound('steal');showEvent(t('stolen'),1700);
       }
     }
     if(d.state==='escape'&&stolenStar&&stolenStar.userData.thief===n){
-      stolenStar.position.set(n.position.x,n.position.y+1.35,n.position.z);stolenStar.rotation.y+=.12;
+      stolenStar.position.set(n.position.x,n.position.y+1.35,n.position.z);stolenStar.rotation.y+=.12;starLight.position.set(stolenStar.position.x,stolenStar.position.y+.4,stolenStar.position.z);
       if(snake[0]&&Math.hypot(n.position.x-snake[0].position.x,n.position.z-snake[0].position.z)<1.05){
         score+=20;addParticleBurst(stolenStar.position.clone(),0xffe866,34);scene.remove(stolenStar);stolenStar=null;
-        showCombo(t('starSaved'));sound('coin');npcGroup.remove(n);npcs=npcs.filter(x=>x!==n);spawnFood();updateHUD();return;
+        setCrowdMood('celebrate',1800);haptic([35,25,80]);showCombo(t('starSaved'));sound('coin');npcGroup.remove(n);npcs=npcs.filter(x=>x!==n);spawnFood();updateHUD();return;
       }
       if(Math.hypot(n.position.x-d.start.x,n.position.z-d.start.z)<.45){
         score=Math.max(0,score-5);scene.remove(stolenStar);stolenStar=null;showCombo(t('stolen'));updateHUD();
@@ -340,7 +365,7 @@ function clearActors(){
   while(particles.children.length)particles.remove(particles.children[0]);
 }
 function reset(){
-  clearActors();while(npcGroup.children.length)npcGroup.remove(npcGroup.children[0]);npcs=[];if(stolenStar)scene.remove(stolenStar);stolenStar=null;score=0;level=1;combo=0;lives=5;firstLifeBounces=3;invulnerableUntil=0;starsCollected=0;invasionUnlocked=false;royalActive=false;royalUntil=0;nextRoyalScore=160;dragonEventDone=false;dead=false;paused=false;baseInterval=155;direction={x:1,z:0};nextDirection={x:1,z:0};nextNpcRaid=Infinity;
+  clearActors();while(npcGroup.children.length)npcGroup.remove(npcGroup.children[0]);npcs=[];if(stolenStar)scene.remove(stolenStar);stolenStar=null;score=0;level=1;combo=0;gameState.player.lifeCount=5;gameState.player.shieldCharges=3;gameState.player.invulnerableUntilMs=0;gameState.world.crowdMood='calm';gameState.world.crowdMoodUntil=0;starsCollected=0;invasionUnlocked=false;royalActive=false;royalUntil=0;nextRoyalScore=160;dragonEventDone=false;dead=false;paused=false;baseInterval=155;direction={x:1,z:0};nextDirection={x:1,z:0};nextNpcRaid=Infinity;
   for(let i=0;i<4;i++){
     const s=sphereSegment(i===0);s.position.copy(gridPos(-i,0));scene.add(s);snake.push(s);
   }
@@ -355,7 +380,7 @@ function occupied(x,z){
 }
 function randomCell(){
   for(let tries=0;tries<500;tries++){
-    const x=Math.floor(Math.random()*19)-9,z=Math.floor(Math.random()*19)-9;
+    const x=Math.floor(rand()*19)-9,z=Math.floor(rand()*19)-9;
     if(!occupied(x,z))return{x,z};
   }
   return{x:0,z:0};
@@ -373,8 +398,9 @@ function makeStar(){
 }
 function spawnFood(){
   if(food)scene.remove(food);
-  const p=randomCell();food=makeStar();food.position.set(p.x,.68,p.z);food.rotation.x=-.15;scene.add(food);
-  if(Math.random()<.22 && !coin)spawnCoin();
+  const p=randomCell();food=makeStar();food.position.set(p.x,.68,p.z);food.rotation.x=-.15;food.userData.royal=false;scene.add(food);
+  starLight.position.set(p.x,1.1,p.z);starLight.intensity=1.8;starLight.visible=true;
+  if(rand()<.22 && !coin)spawnCoin();
 }
 function spawnCoin(){
   const p=randomCell();
@@ -399,7 +425,7 @@ function addParticleBurst(pos,color=0xffe866,count=20){
   const geo=new THREE.SphereGeometry(.065,5,4);
   for(let i=0;i<count;i++){
     const p=new THREE.Mesh(geo,mat(color,.4,.1));p.position.copy(pos);
-    p.userData.v=new THREE.Vector3((Math.random()-.5)*.16,Math.random()*.14+.04,(Math.random()-.5)*.16);
+    p.userData.v=new THREE.Vector3((rand()-.5)*.16,rand()*.14+.04,(rand()-.5)*.16);
     p.userData.life=1;particles.add(p);
   }
 }
@@ -408,6 +434,21 @@ function updateParticles(){
     p.position.add(p.userData.v);p.userData.v.y-=.006;p.userData.life-=.035;p.scale.setScalar(Math.max(0,p.userData.life));
     if(p.userData.life<=0)particles.remove(p);
   });
+}
+function startAudioLayers(){
+  if(!audioCtx||gameState.audio.ambience)return;
+  const makeLayer=(freq,type,vol)=>{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.value=freq;g.gain.value=vol;o.connect(g);g.connect(audioCtx.destination);o.start();return{osc:o,gain:g};
+  };
+  gameState.audio.ambience=makeLayer(72,'triangle',.006);
+  gameState.audio.tension=makeLayer(146,'sine',.0008);
+}
+function updateAudioLayers(){
+  if(!gameState.audio.ambience)return;
+  const now=audioCtx.currentTime;
+  const tension=Math.max(0,(3-gameState.player.lifeCount))*.002+(royalActive?.003:0)+(stolenStar?.004:0);
+  gameState.audio.tension.gain.gain.setTargetAtTime(tension,now,.18);
+  gameState.audio.ambience.gain.gain.setTargetAtTime(soundOn?.006:0,now,.18);
 }
 function sound(type){
   if(!soundOn)return;
@@ -430,8 +471,8 @@ function showEvent(txt,ms=2200){const e=$('eventPill');e.textContent=txt;e.class
 function updateHUD(){
   $('score').textContent=score;$('level').textContent=level;$('best').textContent=best;
   $('nextLevel').textContent=level*LEVEL_STEP;
-  $('livesHud').textContent='♥'.repeat(Math.max(0,lives))+'♡'.repeat(Math.max(0,5-lives));
-  $('bouncesHud').textContent=lives===5&&firstLifeBounces>0?'↩ '+firstLifeBounces:'';
+  $('livesHud').textContent='♥'.repeat(Math.max(0,gameState.player.lifeCount))+'♡'.repeat(Math.max(0,5-gameState.player.lifeCount));
+  $('shieldHud').textContent=gameState.player.lifeCount===5&&gameState.player.shieldCharges>0?'🛡 ×'+gameState.player.shieldCharges:'';
 }
 function maybeLevelUp(){
   const target=Math.floor(score/LEVEL_STEP)+1;
@@ -450,33 +491,54 @@ function applyTheme(){
   world.children[0]?.material?.color.setHex(t[2]);
 }
 function sameCell(obj,p){return obj&&Math.round(obj.position.x)===p.x&&Math.round(obj.position.z)===p.z}
+function spiralCells(len){
+  const cells=[{x:0,z:0}];let x=0,z=0,step=1;
+  const dirs=[[1,0],[0,1],[-1,0],[0,-1]];
+  let d=0;
+  while(cells.length<len&&step<20){
+    for(let twice=0;twice<2;twice++){
+      const [dx,dz]=dirs[d%4];
+      for(let i=0;i<step&&cells.length<len;i++){
+        x+=dx;z+=dz;
+        if(Math.abs(x)<=9&&Math.abs(z)<=9)cells.push({x,z});
+      }
+      d++;
+    }
+    step++;
+  }
+  return cells.slice(0,len);
+}
+function playShieldBounce(){
+  haptic([35,30,55]);setCrowdMood('tense',900);
+  snake.forEach((s,i)=>{s.scale.setScalar(.78);setTimeout(()=>{if(s.parent)s.scale.setScalar(1)},90+i*6)});
+}
 function respawnAfterHit(){
-  const len=Math.max(4,snake.length);
+  const len=Math.min(Math.max(4,snake.length),361),cells=spiralCells(len);
   snake.forEach(o=>scene.remove(o));snake=[];
   direction={x:1,z:0};nextDirection={x:1,z:0};
-  for(let i=0;i<len;i++){
-    const s=sphereSegment(i===0);s.position.copy(gridPos(-i,0));scene.add(s);snake.push(s);
-  }
+  cells.forEach((cell,i)=>{
+    const s=sphereSegment(i===0);s.position.copy(gridPos(cell.x,cell.z));scene.add(s);snake.push(s);
+  });
   rotateHead();
   npcs.slice().forEach(n=>{
-    if(Math.hypot(n.position.x,n.position.z)<4){npcGroup.remove(n);npcs=npcs.filter(x=>x!==n)}
+    if(Math.hypot(n.position.x,n.position.z)<5){npcGroup.remove(n);npcs=npcs.filter(x=>x!==n)}
   });
-  invulnerableUntil=performance.now()+1200;lastMove=performance.now();
+  gameState.player.invulnerableUntilMs=performance.now()+1300;lastMove=performance.now();
 }
 function handleCollision(){
-  if(dead||performance.now()<invulnerableUntil)return;
+  if(dead||performance.now()<gameState.player.invulnerableUntilMs)return;
   shake=.7;flash();
-  if(lives===5&&firstLifeBounces>0){
-    firstLifeBounces--;
-    showCombo(t('bounce')+' '+(3-firstLifeBounces)+'/3');
+  if(gameState.player.lifeCount===5&&gameState.player.shieldCharges>0){
+    gameState.player.shieldCharges--;playShieldBounce();
+    showCombo(t('shieldHit')+' · '+gameState.player.shieldCharges);
     sound('raid');respawnAfterHit();updateHUD();return;
   }
-  lives--;
-  showCombo(lives>0?t('lifeLost')+' · '+lives:t('collision'));
-  sound(lives>0?'steal':'over');
+  gameState.player.lifeCount--;haptic(gameState.player.lifeCount>0?[120]:[180,70,180]);setCrowdMood(gameState.player.lifeCount===1?'danger':'tense',2200);
+  showCombo(gameState.player.lifeCount>0?t('lifeLost')+' · '+gameState.player.lifeCount:t('collision'));
+  sound(gameState.player.lifeCount>0?'steal':'over');
   updateHUD();
-  if(lives<=0){die();return}
-  if(lives===1)showEvent(t('lastLife'),1800);
+  if(gameState.player.lifeCount<=0){die();return}
+  if(gameState.player.lifeCount===1)showEvent(t('lastLife'),1800);
   respawnAfterHit();
 }
 function die(){
@@ -511,8 +573,10 @@ function move(){
 
   if(ate){
     combo=(performance.now()-comboTimer<2500)?combo+1:1;comboTimer=performance.now();
-    const bonus=Math.min(combo-1,5)*2,boostBonus=boosting?5:0;score+=10+bonus+boostBonus;starsCollected++;
-    addParticleBurst(food.position.clone(),0xffe866,24);sound('eat');showCombo(boosting?t('boostBonus')+' +'+(10+bonus+boostBonus):(combo>1?'COMBO x'+combo:' +10'));
+    const royalBonus=food.userData.royal?40:0;
+    const bonus=Math.min(combo-1,5)*2,boostBonus=boosting?5:0;score+=10+bonus+boostBonus+royalBonus;starsCollected++;
+    setCrowdMood('celebrate',1400);haptic(food.userData.royal?[45,30,90]:35);
+    addParticleBurst(food.position.clone(),0xffe866,food.userData.royal?42:24);sound(food.userData.royal?'coin':'eat');showCombo(food.userData.royal?t('royalStar')+' +'+(10+bonus+boostBonus+royalBonus):(boosting?t('boostBonus')+' +'+(10+bonus+boostBonus):(combo>1?'COMBO x'+combo:' +10')));
     if(starsCollected>=2&&!invasionUnlocked){invasionUnlocked=true;nextNpcRaid=performance.now()+1600;showEvent(t('raidInvader'),1800)}
     spawnFood();maybeLevelUp();updateHUD();
   }
@@ -531,7 +595,7 @@ function togglePause(){
 function toggleSound(){soundOn=!soundOn;$('soundBtn').textContent=soundOn?'🔊':'🔇';if(soundOn)sound('turn')}
 function startGame(){
   if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-  if(audioCtx.state==='suspended')audioCtx.resume();
+  if(audioCtx.state==='suspended')audioCtx.resume();startAudioLayers();
   $('start').style.display='none';$('gameover').style.display='none';reset();running=true;sound('start');
 }
 function restart(){ $('gameover').style.display='none';reset();running=true;sound('start') }
@@ -554,9 +618,13 @@ document.querySelectorAll('.pad').forEach(btn=>btn.addEventListener('pointerdown
 }));
 $('boost').addEventListener('pointerdown',()=>boosting=true);$('boost').addEventListener('pointerup',()=>boosting=false);$('boost').addEventListener('pointercancel',()=>boosting=false);
 $('startBtn').onclick=startGame;$('restartBtn').onclick=restart;$('pauseBtn').onclick=togglePause;$('soundBtn').onclick=toggleSound;
+$('controlsToggle').onclick=()=>{document.body.classList.toggle('dpad');localStorage.setItem('kukac3d-dpad',document.body.classList.contains('dpad')?'1':'0')};
+if(localStorage.getItem('kukac3d-dpad')==='1')document.body.classList.add('dpad');
 $('helpBtn').onclick=()=>$('help').style.display='grid';$('showHelp').onclick=()=>$('help').style.display='grid';$('closeHelp').onclick=()=>$('help').style.display='none';
 
-let sx=0,sy=0;
+let sx=0,sy=0,holdBoostTimer=null;
+renderer.domElement.addEventListener('touchstart',e=>{const t=e.touches[0];if(t.clientX>innerWidth*.68){holdBoostTimer=setTimeout(()=>{boosting=true;haptic(20)},260)}},{passive:true});
+renderer.domElement.addEventListener('touchend',()=>{clearTimeout(holdBoostTimer);holdBoostTimer=null;boosting=false},{passive:true});
 window.addEventListener('touchstart',e=>{const t=e.touches[0];sx=t.clientX;sy=t.clientY},{passive:true});
 window.addEventListener('touchend',e=>{
   const t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;if(Math.max(Math.abs(dx),Math.abs(dy))<35)return;
@@ -569,21 +637,22 @@ function animate(t){
     const interval=boosting?Math.max(48,baseInterval*.58):baseInterval;
     if(t-lastMove>interval){move();lastMove=t}
   }
-  if(food){food.rotation.y+=.035;food.position.y=.68+Math.sin(t*.004)*.12}
+  if(food){food.rotation.y+=.035;food.position.y=.68+Math.sin(t*.004)*.12;starLight.visible=true;starLight.position.set(food.position.x,food.position.y+.35,food.position.z);starLight.intensity=(food.userData.royal?2.8:1.8)+Math.sin(t*.008)*.35}else if(!stolenStar)starLight.visible=false
   if(coin){coin.rotation.y+=.08;coin.rotation.x+=.025;coin.position.y=.75+Math.sin(t*.006)*.14}
   deco.children.forEach((c,i)=>{if(c.type==='Group')c.position.x+=Math.sin(t*.00012+i)*.002});
   snake.forEach((s,i)=>{s.position.y=.56+Math.sin(t*.008-i*.52)*.035});
   updateParticles();
-  updateNPCs(t);
+  updateNPCs(t);updateAudioLayers();
 
   const targetX=direction.x*1.5,targetZ=direction.z*1.5;
   const tablet=innerWidth>=521&&innerWidth<=1024;
   const portrait=innerHeight>innerWidth;
   const targetY=tablet?(portrait?22:18):19,targetBaseZ=tablet?(portrait?21:19):18;
+  const desiredFov=boosting?59:52;camera.fov+=(desiredFov-camera.fov)*.08;camera.updateProjectionMatrix();
   camera.position.y+=(targetY-camera.position.y)*.025;
   camera.position.x+=(targetX-camera.position.x)*.02;
   camera.position.z+=(targetBaseZ+targetZ-camera.position.z)*.02;
-  if(shake>0){camera.position.x+=(Math.random()-.5)*shake;camera.position.y+=(Math.random()-.5)*shake;shake*=.9}
+  if(shake>0){camera.position.x+=(rand()-.5)*shake;camera.position.y+=(rand()-.5)*shake;shake*=.9}
   camera.lookAt(0,0,0);
   renderer.render(scene,camera);
 }
@@ -592,6 +661,16 @@ window.addEventListener('orientationchange',()=>setTimeout(()=>window.dispatchEv
 window.addEventListener('resize',()=>{
   camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 });
+if(qaMode){
+  window.__KUKAC_QA__={
+    snapshot:()=>({lives:gameState.player.lifeCount,shield:gameState.player.shieldCharges,score,level,food:!!food,stolen:!!stolenStar,dead}),
+    collide:()=>{gameState.player.invulnerableUntilMs=0;handleCollision();return window.__KUKAC_QA__.snapshot()},
+    setScore:v=>{score=v;updateHUD();return score},
+    setLevel:v=>{level=v;return level},
+    forceInvasion:kind=>spawnNpcRaid(performance.now(),kind),
+    ensureCollectible:()=>{if(!food&&!stolenStar)spawnFood();return !!food}
+  };
+}
 buildCrowd();
 reset();running=false;requestAnimationFrame(animate);
 })();
