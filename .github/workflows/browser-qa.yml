@@ -38,6 +38,18 @@ jobs:
           (async () => {
             const browser = await chromium.launch({ headless: true });
             try {
+              const productionPage = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+              const productionErrors = [];
+              productionPage.on('pageerror', error => productionErrors.push(String(error)));
+              await productionPage.goto('http://127.0.0.1:4173/', { waitUntil: 'domcontentloaded' });
+              await productionPage.click('#startBtn');
+              await productionPage.waitForTimeout(500);
+              if (await productionPage.locator('#start').evaluate(el => getComputedStyle(el).display) !== 'none') {
+                throw new Error('production: start overlay did not close');
+              }
+              if (productionErrors.length) throw new Error('production: page errors: ' + productionErrors.join(' | '));
+              await productionPage.close();
+
               for (const vp of viewports) {
                 const page = await browser.newPage({ viewport: { width: vp.width, height: vp.height } });
                 const errors = [];
