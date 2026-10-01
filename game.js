@@ -128,15 +128,15 @@ function spawnNpcRaid(now,forcedKind=null){
   npcGroup.add(obj);npcs.push(obj);
   showCombo(kind==='dragon'?t('raidDragon'):t('raidInvader'));sound('raid');
 }
-function triggerRoyalEvent(t){
+function triggerRoyalEvent(now){
   if(gameState.progression.royalOn||gameState.session.isDead)return;
-  gameState.progression.royalOn=true;gameState.progression.royalDeadline=t+10000;gameState.progression.royalNextAt+=160;showEvent(t('eventRoyal'),3200);sound('level');setCrowdMood('celebrate',3200);haptic([40,40,80]);
+  gameState.progression.royalOn=true;gameState.progression.royalDeadline=now+10000;gameState.progression.royalNextAt+=160;showEvent(t('eventRoyal'),3200);sound('level');setCrowdMood('celebrate',3200);haptic([40,40,80]);
   if(food){food.userData.royal=true;food.scale.setScalar(1.35);starLight.intensity=2.8;}
   const queen=crowd.find(x=>x.userData.kind==='queen');if(queen)queen.scale.setScalar(1.22);
   setTimeout(()=>{if(gameState.session.isRunning&&!gameState.session.isDead)spawnNpcRaid(performance.now(),'soldier')},650);
   setTimeout(()=>{if(gameState.session.isRunning&&!gameState.session.isDead)spawnNpcRaid(performance.now(),'soldier')},1200);
 }
-function triggerDragonEvent(t){
+function triggerDragonEvent(now){
   if(gameState.progression.dragonTriggered||level<4)return;
   gameState.progression.dragonTriggered=true;showEvent(t('eventDragon'),3200);sound('raid');setCrowdMood('danger',3500);haptic([80,50,80]);
   const ring=new THREE.Mesh(new THREE.RingGeometry(0.8,1.08,32),new THREE.MeshBasicMaterial({color:0xff4b35,transparent:true,opacity:0.72,side:THREE.DoubleSide}));
@@ -144,28 +144,28 @@ function triggerDragonEvent(t){
   let pulse=0;const warn=setInterval(()=>{pulse++;ring.scale.setScalar(1+(pulse%2)*0.35);ring.material.opacity=pulse%2? 0.35:0.72},140);
   setTimeout(()=>{clearInterval(warn);scene.remove(ring);if(gameState.session.isRunning&&!gameState.session.isDead)spawnNpcRaid(performance.now(),'dragon')},1100);
 }
-function updateNPCs(t){
-  if(t>gameState.world.crowdMoodUntil)gameState.world.crowdMood='calm';
+function updateNPCs(now){
+  if(now>gameState.world.crowdMoodUntil)gameState.world.crowdMood='calm';
   const moodAmp=gameState.world.crowdMood==='celebrate'?1.35:gameState.world.crowdMood==='danger'?1.05:gameState.world.crowdMood==='tense'? 0.8:0.55;
   crowd.forEach((f,i)=>{
     const a=f.userData.arms;
-    if(a){a[0].rotation.z=Math.sin(t*0.007+(f.userData.phase||i))*moodAmp;a[1].rotation.z=-Math.sin(t*0.007+(f.userData.phase||i))*moodAmp}
-    f.position.y=Math.abs(Math.sin(t*0.005+(f.userData.phase||i)))*(0.05+moodAmp*0.06);
-    if(f.userData.wings){f.userData.wings[0].rotation.y=Math.sin(t*0.005)*0.5;f.userData.wings[1].rotation.y=-Math.sin(t*0.005)*0.5;f.position.x=8.5+Math.sin(t*0.0006)*4}
+    if(a){a[0].rotation.z=Math.sin(now*0.007+(f.userData.phase||i))*moodAmp;a[1].rotation.z=-Math.sin(now*0.007+(f.userData.phase||i))*moodAmp}
+    f.position.y=Math.abs(Math.sin(now*0.005+(f.userData.phase||i)))*(0.05+moodAmp*0.06);
+    if(f.userData.wings){f.userData.wings[0].rotation.y=Math.sin(now*0.005)*0.5;f.userData.wings[1].rotation.y=-Math.sin(now*0.005)*0.5;f.position.x=8.5+Math.sin(now*0.0006)*4}
   });
-  if(gameState.progression.royalOn&&t>gameState.progression.royalDeadline){gameState.progression.royalOn=false;const queen=crowd.find(x=>x.userData.kind==='queen');if(queen)queen.scale.setScalar(1.05)}
-  if(gameState.progression.invasionReady&&gameState.session.isRunning&&!gameState.session.isPaused&&!gameState.session.isDead&&t>nextNpcRaid){
-    spawnNpcRaid(t);nextNpcRaid=t+Math.max(5000,9000-level*450)+rand()*2400;
+  if(gameState.progression.royalOn&&now>gameState.progression.royalDeadline){gameState.progression.royalOn=false;const queen=crowd.find(x=>x.userData.kind==='queen');if(queen)queen.scale.setScalar(1.05)}
+  if(gameState.progression.invasionReady&&gameState.session.isRunning&&!gameState.session.isPaused&&!gameState.session.isDead&&now>nextNpcRaid){
+    spawnNpcRaid(now);nextNpcRaid=now+Math.max(5000,9000-level*450)+rand()*2400;
   }
-  if(score>=gameState.progression.royalNextAt)triggerRoyalEvent(t);
-  triggerDragonEvent(t);
+  if(score>=gameState.progression.royalNextAt)triggerRoyalEvent(now);
+  triggerDragonEvent(now);
 
   // Star-state watchdog: the game must never remain permanently without a collectible.
   if(!food&&!gameState.progression.stolenCollectible&&gameState.session.isRunning&&!gameState.session.isDead)spawnFood();
   if(gameState.progression.stolenCollectible){
     const owner=gameState.progression.stolenCollectible.userData.thief;
     const ownerAlive=owner&&npcs.includes(owner)&&owner.userData.state==='escape';
-    const stolenTooLong=ownerAlive&&owner.userData.stolenAt&&t-owner.userData.stolenAt>9000;
+    const stolenTooLong=ownerAlive&&owner.userData.stolenAt&&now-owner.userData.stolenAt>9000;
     if(!ownerAlive||stolenTooLong){
       if(ownerAlive){npcGroup.remove(owner);npcs=npcs.filter(x=>x!==owner)}
       scene.remove(gameState.progression.stolenCollectible);gameState.progression.stolenCollectible=null;
@@ -175,7 +175,7 @@ function updateNPCs(t){
 
   npcs.slice().forEach(n=>{
     const d=n.userData;if(gameState.session.isPaused||gameState.session.isDead)return;
-    if(d.wings){d.wings[0].rotation.y=Math.sin(t*0.012)*0.7;d.wings[1].rotation.y=-Math.sin(t*0.012)*0.7}
+    if(d.wings){d.wings[0].rotation.y=Math.sin(now*0.012)*0.7;d.wings[1].rotation.y=-Math.sin(now*0.012)*0.7}
     let dest;
     if(d.state==='escape')dest=d.start;
     else if(d.role==='blocker'&&snake[0])dest=snake[0].position.clone().add(new THREE.Vector3(direction.x*2,0,direction.z*2));
@@ -188,7 +188,7 @@ function updateNPCs(t){
     if(d.role==='thief'&&d.state==='in'&&food){
       const dx=n.position.x-food.position.x,dz=n.position.z-food.position.z;
       if(Math.hypot(dx,dz)<1.0){
-        d.state='escape';d.steal=true;d.stolenAt=t;gameState.progression.stolenCollectible=food;food=null;
+        d.state='escape';d.steal=true;d.stolenAt=now;gameState.progression.stolenCollectible=food;food=null;
         gameState.progression.stolenCollectible.userData.thief=n;setCrowdMood('danger',1800);haptic([70,40,70]);showCombo(t('stolen'));sound('steal');showEvent(t('stolen'),1700);
       }
     }
