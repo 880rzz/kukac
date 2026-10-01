@@ -1,0 +1,89 @@
+name: KUKAC 3D Browser QA
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  browser-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --save-dev playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start static server
+        run: |
+          python3 -m http.server 4173 >/tmp/kukac-http.log 2>&1 &
+          echo $! > /tmp/kukac-http.pid
+      - name: Run responsive browser smoke tests
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright');
+
+          const viewports = [
+            { name: 'desktop', width: 1440, height: 900 },
+            { name: 'tablet', width: 834, height: 1112 },
+            { name: 'mobile', width: 390, height: 844 }
+          ];
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            try {
+              for (const vp of viewports) {
+                const page = await browser.newPage({ viewport: { width: vp.width, height: vp.height } });
+                const errors = [];
+                page.on('pageerror', e => errors.push(String(e)));
+                await page.goto('http://127.0.0.1:4173', { waitUntil: 'networkidle' });
+
+                await page.waitForSelector('#startLangSelect');
+                if (await page.locator('#startLangSelect').inputValue() !== 'de') {
+                  throw new Error(vp.name + ': German is not the default language');
+                }
+
+                await page.selectOption('#startLangSelect', 'en');
+                await page.waitForTimeout(100);
+                const startText = (await page.locator('#startBtn').innerText()).trim();
+                if (startText !== 'START GAME') throw new Error(vp.name + ': language switching failed: ' + startText);
+
+                await page.click('#startBtn');
+                await page.waitForTimeout(500);
+                if (await page.locator('#start').evaluate(el => getComputedStyle(el).display) !== 'none') {
+                  throw new Error(vp.name + ': start overlay did not close');
+                }
+
+                const canvasBox = await page.locator('canvas').boundingBox();
+                if (!canvasBox || canvasBox.width < 100 || canvasBox.height < 100) {
+                  throw new Error(vp.name + ': WebGL canvas not rendered');
+                }
+
+                if (vp.name !== 'desktop') {
+                  const boostDisplay = await page.locator('#boost').evaluate(el => getComputedStyle(el).display);
+                  if (boostDisplay === 'none') throw new Error(vp.name + ': mobile/tablet BOOST control missing');
+                }
+
+                if (errors.length) throw new Error(vp.name + ': page errors: ' + errors.join(' | '));
+                await page.screenshot({ path: 'qa-' + vp.name + '.png', fullPage: true });
+                await page.close();
+              }
+            } finally {
+              await browser.close();
+            }
+          })().catch(err => { console.error(err); process.exit(1); });
+          NODE
+      - name: Upload QA screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kukac-browser-qa
+          path: qa-*.png
+          if-no-files-found: ignore
