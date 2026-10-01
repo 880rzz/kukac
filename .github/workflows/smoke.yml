@@ -17,17 +17,17 @@ jobs:
         run: |
           node <<'NODE'
           const fs=require('fs');
-          for(const file of ['index.html','styles.css','i18n.js','game.js']){
+          for(const file of ['index.html','styles.css','i18n.js','world.js','actors.js','audio.js','game.js']){
             if(!fs.existsSync(file)) throw new Error('Missing '+file);
           }
           const html=fs.readFileSync('index.html','utf8');
           const game=fs.readFileSync('game.js','utf8');
           const i18n=fs.readFileSync('i18n.js','utf8');
           if(!html.includes('<html lang="de">')) throw new Error('German default language missing');
-          for(const ref of ['styles.css','i18n.js','game.js']) if(!html.includes(ref)) throw new Error('Missing asset reference '+ref);
+          for(const ref of ['styles.css','i18n.js','world.js','actors.js','audio.js','game.js']) if(!html.includes(ref)) throw new Error('Missing asset reference '+ref);
           const required=['langSelect','startLangSelect','startBtn','score','level','best','eventPill','livesHud','shieldHud'];
           for(const id of required){if(!html.includes('id="'+id+'"')) throw new Error('Missing #'+id)}
-          for(const [name,src] of [['i18n.js',i18n],['game.js',game]]){
+          for(const name of ['i18n.js','world.js','actors.js','audio.js','game.js']){const src=fs.readFileSync(name,'utf8');
             try{new Function(src)}catch(e){throw new Error(name+' syntax error: '+e.message)}
           }
           for(const token of ['gameState','spiralCells','triggerRoyalEvent','triggerDragonEvent','starSaved','visibilitychange','prefers-reduced-motion','__KUKAC_QA__']){
