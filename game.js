@@ -627,6 +627,8 @@ if(qaMode){
     setScore:v=>{score=v;updateHUD();return score},
     setLevel:v=>{level=v;return level},
     forceInvasion:kind=>spawnNpcRaid(performance.now(),kind),
+    triggerRoyal:()=>{triggerRoyalEvent(performance.now());return {royal:gameState.progression.royalOn,foodRoyal:!!(food&&food.userData.royal)}},
+    triggerDragon:()=>{level=Math.max(level,4);gameState.progression.dragonTriggered=false;triggerDragonEvent(performance.now());return gameState.progression.dragonTriggered},
     ensureCollectible:()=>{if(!food&&!gameState.progression.stolenCollectible)spawnFood();return !!food}
   };
 }
