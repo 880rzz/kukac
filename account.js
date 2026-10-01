@@ -299,6 +299,7 @@ loadMe();
 
 window.KUKAC_ACCOUNT = {
   startRun, submitRun, loadMe, loadLeaderboard, showPlayer,
+  refreshLabels:()=>{refreshIdentity();fillMyProfile();},
   get player(){ return state.player; },
   get cloudAvailable(){ return state.cloudAvailable; }
 };
