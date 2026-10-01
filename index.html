@@ -94,7 +94,7 @@ canvas{display:block;width:100%;height:100%}
 <div id="mission"><span data-i18n="nextLevel">Nächstes Level:</span> <b id="nextLevel">80</b> <span data-i18n="pointsWord">Punkte</span></div>
 <div id="combo"></div>
 <div id="flash"></div>
-<div id="levelBanner"><div><span>SZINT</span><b id="levelBig">1</b></div></div>
+<div id="levelBanner"><div><span data-i18n="levelBanner">LEVEL</span><b id="levelBig">1</b></div></div>
 
 <div id="controls" aria-label="Mobil irányítás">
   <button class="pad up" data-dir="up">▲</button>
@@ -188,7 +188,7 @@ const $=id=>document.getElementById(id);
 
 const I18N={
 de:{
-scoreLabel:'Punkte',levelLabel:'Level',bestLabel:'Rekord',nextLevel:'Nächstes Level:',pointsWord:'Punkte',
+scoreLabel:'Punkte',levelLabel:'Level',bestLabel:'Rekord',levelBanner:'LEVEL',nextLevel:'Nächstes Level:',pointsWord:'Punkte',
 intro:'Die klassische Snake-Idee als modernes 3D-Arcade-Spiel. Sammle Sterne und Münzen, weiche Hindernissen aus, baue Combos auf und erreiche immer schnellere Levels.',
 keyboardTitle:'⌨️ Tastatur',keyboardText:'Pfeile oder WASD · Leertaste = Pause · Shift = Boost',mobileTitle:'📱 Mobil',mobileText:'Richtungstasten oder Wischen · BOOST = Beschleunigen',starTitle:'⭐ Stern',starText:'+10 Punkte, der Wurm wird länger und die Combo steigt.',coinTitle:'🪙 Goldmünze',coinText:'Seltener Bonus: +25 Punkte, ohne Wachstum.',
 startBtn:'SPIEL STARTEN',helpBtnText:'Vollständige Anleitung',helpTitle:'Wie <em>spielst du?</em>',
@@ -196,7 +196,7 @@ helpGoal:'<b>Ziel:</b> Sammle so viele Punkte wie möglich, ohne gegen Wände, H
 raidDragon:'DRACHE!',raidInvader:'EINDRINGLING!',stolen:'GESTOHLEN! -5',collision:'TREFFER!',pause:'PAUSE',go:'LOS',result:(s,l,b)=>`Punkte: <b>${s}</b> · Level: <b>${l}</b> · Rekord: <b>${b}</b>`
 },
 tr:{
-scoreLabel:'Puan',levelLabel:'Seviye',bestLabel:'Rekor',nextLevel:'Sonraki seviye:',pointsWord:'puan',
+scoreLabel:'Puan',levelLabel:'Seviye',bestLabel:'Rekor',levelBanner:'SEVİYE',nextLevel:'Sonraki seviye:',pointsWord:'puan',
 intro:'Klasik Snake fikrinin modern 3D arcade yorumu. Yıldız ve para topla, engellerden kaç, kombo yap ve giderek hızlanan seviyelere ulaş.',
 keyboardTitle:'⌨️ Klavye',keyboardText:'Ok tuşları veya WASD · Boşluk = Duraklat · Shift = Hızlan',mobileTitle:'📱 Mobil',mobileText:'Yön tuşları veya kaydırma · BOOST = Hızlan',starTitle:'⭐ Yıldız',starText:'+10 puan, solucan uzar ve kombo artar.',coinTitle:'🪙 Altın para',coinText:'Nadir bonus: +25 puan, uzatma yok.',
 startBtn:'OYUNU BAŞLAT',helpBtnText:'Tam kullanım kılavuzu',helpTitle:'Nasıl <em>oynanır?</em>',
@@ -204,7 +204,7 @@ helpGoal:'<b>Amaç:</b> Duvara, engele veya kendi gövdende çarpmadan olabildi�
 raidDragon:'EJDERHA!',raidInvader:'DAVETSİZ!',stolen:'ÇALINDI! -5',collision:'ÇARPIŞMA!',pause:'DURAKLAT',go:'DEVAM',result:(s,l,b)=>`Puan: <b>${s}</b> · Seviye: <b>${l}</b> · Rekor: <b>${b}</b>`
 },
 uk:{
-scoreLabel:'Очки',levelLabel:'Рівень',bestLabel:'Рекорд',nextLevel:'Наступний рівень:',pointsWord:'очок',
+scoreLabel:'Очки',levelLabel:'Рівень',bestLabel:'Рекорд',levelBanner:'РІВЕНЬ',nextLevel:'Наступний рівень:',pointsWord:'очок',
 intro:'Сучасна 3D-аркадна версія класичної Snake. Збирай зірки й монети, оминай перешкоди, будуй комбо та переходь на дедалі швидші рівні.',
 keyboardTitle:'⌨️ Клавіатура',keyboardText:'Стрілки або WASD · Пробіл = пауза · Shift = прискорення',mobileTitle:'📱 Мобільний',mobileText:'Кнопки напрямку або свайп · BOOST = прискорення',starTitle:'⭐ Зірка',starText:'+10 очок, черв’як стає довшим, а комбо зростає.',coinTitle:'🪙 Золота монета',coinText:'Рідкісний бонус: +25 очок без збільшення довжини.',
 startBtn:'ПОЧАТИ ГРУ',helpBtnText:'Повна інструкція',helpTitle:'Як <em>грати?</em>',
@@ -212,7 +212,7 @@ helpGoal:'<b>Мета:</b> Набери якомога більше очок, н
 raidDragon:'ДРАКОН!',raidInvader:'ПОРУШНИК!',stolen:'ВКРАЛИ! -5',collision:'ЗІТКНЕННЯ!',pause:'ПАУЗА',go:'СТАРТ',result:(s,l,b)=>`Очки: <b>${s}</b> · Рівень: <b>${l}</b> · Рекорд: <b>${b}</b>`
 },
 hu:{
-scoreLabel:'Pont',levelLabel:'Szint',bestLabel:'Rekord',nextLevel:'Következő szint:',pointsWord:'pont',
+scoreLabel:'Pont',levelLabel:'Szint',bestLabel:'Rekord',levelBanner:'SZINT',nextLevel:'Következő szint:',pointsWord:'pont',
 intro:'A klasszikus Snake modern, látványos 3D arcade újragondolása. Gyűjts csillagokat és érméket, kerüld az akadályokat, építs kombót és juss egyre gyorsabb szintekre.',
 keyboardTitle:'⌨️ Billentyűzet',keyboardText:'Nyilak vagy WASD · Space = szünet · Shift = boost',mobileTitle:'📱 Mobil',mobileText:'Iránygombok vagy húzás · BOOST = gyorsítás',starTitle:'⭐ Csillag',starText:'+10 pont, hosszabb leszel és nő a kombó.',coinTitle:'🪙 Arany érme',coinText:'Ritka bónusz: +25 pont, nem növeszt.',
 startBtn:'JÁTÉK INDÍTÁSA',helpBtnText:'Teljes használati útmutató',helpTitle:'Hogyan <em>játssz?</em>',
@@ -220,7 +220,7 @@ helpGoal:'<b>Cél:</b> Gyűjts minél több pontot anélkül, hogy falnak, akad�
 raidDragon:'SÁRKÁNY!',raidInvader:'BETOLAKODÓ!',stolen:'ELLOPTÁK! -5',collision:'ÜTKÖZÉS!',pause:'SZÜNET',go:'RAJT',result:(s,l,b)=>`Pontszám: <b>${s}</b> · Szint: <b>${l}</b> · Rekord: <b>${b}</b>`
 },
 en:{
-scoreLabel:'Score',levelLabel:'Level',bestLabel:'Best',nextLevel:'Next level:',pointsWord:'points',
+scoreLabel:'Score',levelLabel:'Level',bestLabel:'Best',levelBanner:'LEVEL',nextLevel:'Next level:',pointsWord:'points',
 intro:'A modern 3D arcade take on classic Snake. Collect stars and coins, dodge obstacles, build combos and reach increasingly faster levels.',
 keyboardTitle:'⌨️ Keyboard',keyboardText:'Arrow keys or WASD · Space = pause · Shift = boost',mobileTitle:'📱 Mobile',mobileText:'Direction buttons or swipe · BOOST = speed up',starTitle:'⭐ Star',starText:'+10 points, you grow longer and your combo increases.',coinTitle:'🪙 Gold coin',coinText:'Rare bonus: +25 points without growing.',
 startBtn:'START GAME',helpBtnText:'Full instructions',helpTitle:'How to <em>play?</em>',
@@ -398,7 +398,9 @@ function updateNPCs(t){
       const dest=food?food.position:d.target;
       const v=dest.clone().sub(n.position);v.y=d.kind==='dragon'?(dest.y+1.7-n.position.y):0;
       if(v.length()>.18){v.normalize();n.position.add(v.multiplyScalar(d.speed));n.lookAt(dest.x,n.position.y,dest.z);}
-      if(food && n.position.distanceTo(food.position)<1.0){
+      const foodDx=food?Math.abs(n.position.x-food.position.x):999;
+      const foodDz=food?Math.abs(n.position.z-food.position.z):999;
+      if(food && Math.hypot(foodDx,foodDz)<1.0){
         d.steal=true;d.state='out';
         addParticleBurst(food.position.clone(),0xff6b35,22);
         scene.remove(food);food=null;score=Math.max(0,score-5);updateHUD();showCombo(t('stolen'));sound('steal');
@@ -409,7 +411,7 @@ function updateNPCs(t){
       if(v.length()>.25){v.normalize();n.position.add(v.multiplyScalar(d.speed*1.25));}
       else{npcGroup.remove(n);npcs=npcs.filter(x=>x!==n);}
     }
-    if(snake[0] && n.position.distanceTo(snake[0].position)<.68){shake=.7;showCombo(t('collision'));die();}
+    if(snake[0] && Math.hypot(n.position.x-snake[0].position.x,n.position.z-snake[0].position.z)<.68){shake=.7;showCombo(t('collision'));die();}
   });
 }
 
