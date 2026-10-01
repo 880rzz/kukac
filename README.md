@@ -85,3 +85,22 @@ A pálya körül most 3D közönség, királynő, katonák és sárkányok mozog
 - a rajtaütések a szintekkel fokozatosan gyakoribbá válnak
 
 A retro platformhősök saját, eredeti low-poly karakterek; nem használnak Super Mario grafikát, modellt vagy hangmintát.
+
+
+## Nyelvek
+
+A játék felülete öt nyelven érhető el:
+
+- német — alapértelmezett
+- török
+- ukrán
+- magyar
+- angol
+
+A nyelv a felső vezérlősávban választható. A választást a böngésző helyben megjegyzi, így a következő megnyitáskor ugyanaz a nyelv töltődik be. Ha nincs korábbi választás, a játék németül indul.
+
+A fordítás kiterjed a HUD-ra, indítóképernyőre, használati útmutatóra, játék vége képernyőre és a dinamikus játéküzenetekre is.
+
+## Mobil és tablet
+
+A kezelőfelület külön reszponzív szabályokat kapott mobilra és tabletre. A nyelvválasztó, pontszám, kezelőgombok, D-pad és BOOST gomb kisebb kijelzőn is egymástól elkülönítve jelenik meg.
