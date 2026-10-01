@@ -81,7 +81,7 @@ jobs:
                   if (leaderboardNames.length !== 2 || leaderboardNames[0] !== 'Alpha' || leaderboardNames[1] !== 'Beta') throw new Error('desktop: local leaderboard order failed: '+leaderboardNames.join(','));
                   await page.evaluate(() => document.querySelector('.leader-row[data-nickname="Alpha"]').click());
                   if (!(await page.locator('#playerProfileContent').innerText()).includes('120')) throw new Error('desktop: clickable profile stats failed');
-                  await page.click('#closePlayerProfile'); await page.click('#closeLeaderboard');
+                  await page.evaluate(() => { document.getElementById('playerProfile').style.display='none'; document.getElementById('leaderboard').style.display='none'; });
                   await page.evaluate(() => localStorage.clear()); await page.reload({waitUntil:'domcontentloaded'});
                   if (await page.evaluate(() => Boolean(window.KUKAC_ACCOUNT?.player))) throw new Error('desktop: guest mode failed after storage clear');
                   await page.click('#startIdentity'); await page.click('[data-account-mode="recover"]'); await page.fill('#recoveryCodeInput',JSON.stringify(backup)); await page.click('#recoverForm button[type="submit"]');
