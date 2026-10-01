@@ -105,7 +105,7 @@
     <div class="account-tabs">
       <button data-account-mode="login" class="active" data-i18n="loginTab">Login</button>
       <button data-account-mode="register" data-i18n="registerTab">Register</button>
-      <button data-account-mode="recover" data-i18n="recoverTab">Recover</button>
+      <button data-account-mode="recover" data-i18n="recoverTab">Restore</button>
       <button data-account-mode="profile" data-i18n="profileTab">Profile</button>
     </div>
     <div id="accountMessage" class="account-message"></div>
@@ -122,24 +122,20 @@
       <label><span data-i18n="passwordAgainLabel">Password again</span><input id="registerPassword2" type="password" autocomplete="new-password" minlength="8" maxlength="128" required></label>
       <p class="microcopy" data-i18n="passwordHelp">Minimum 8 characters. The password is stored only as a salted one-way hash.</p>
       <button class="primary" type="submit" data-i18n="registerButton">Create Arcade ID</button>
-      <div id="recoveryReveal" class="recovery-box" hidden>
-        <small data-i18n="saveRecovery">Save this recovery code. It is shown only once.</small>
-        <code id="recoveryCodeValue"></code>
-      </div>
     </form>
 
     <form id="recoverForm" data-account-pane="recover" class="account-pane" hidden>
-      <p data-i18n="recoverHelp">If cookies are deleted and you forgot your nickname, enter the recovery code you saved at registration.</p>
-      <label><span data-i18n="recoveryCodeLabel">Recovery code</span><input id="recoveryCodeInput" autocomplete="off" placeholder="KUKAC-XXXX-XXXX-XXXX" required></label>
-      <button class="primary" type="submit" data-i18n="recoverButton">Recover nickname</button>
-      <div id="recoveredNicknameBox" class="recovery-box" hidden>
-        <small data-i18n="yourNickname">Your nickname</small>
-        <code id="recoveredNickname"></code>
-      </div>
+      <p data-i18n="recoverHelp">Paste a KUKAC recovery string or choose an exported JSON backup. This restores the local profile and statistics.</p>
+      <label><span data-i18n="recoveryCodeLabel">Recovery backup</span><textarea id="recoveryCodeInput" autocomplete="off" rows="4" placeholder="KUKAC1.…"></textarea></label>
+      <button class="primary" type="submit" data-i18n="recoverButton">Restore backup</button>
+      <label class="file-button"><span data-i18n="importBackupButton">Import JSON backup</span><input id="backupFileInput" type="file" accept="application/json,.json"></label>
     </form>
 
     <div data-account-pane="profile" class="account-pane" hidden>
       <div id="myProfileSummary"></div>
+      <p class="local-notice" data-i18n="localOnlyNotice">Profiles and ranking exist only in this browser. GitHub Pages cannot provide a secure global account or leaderboard.</p>
+      <button id="exportBackupBtn" class="secondary" type="button" data-i18n="exportBackupButton">Download recovery JSON</button>
+      <button id="copyBackupBtn" class="secondary" type="button" data-i18n="copyBackupButton">Copy recovery string</button>
       <button id="logoutBtn" class="secondary" type="button" data-i18n="logoutButton">Logout</button>
     </div>
   </div>
@@ -148,7 +144,7 @@
 <div class="overlay" id="leaderboard" style="display:none">
   <div class="card leaderboard-card">
     <div class="modal-head">
-      <div><small>KUKAC ARCADE</small><h2 data-i18n="leaderboardTitle">Global Leaderboard</h2></div>
+      <div><small>KUKAC ARCADE</small><h2 data-i18n="leaderboardTitle">Local Leaderboard</h2></div>
       <button class="iconbtn" id="closeLeaderboard" aria-label="Close">×</button>
     </div>
     <div class="leader-head"><span>#</span><span data-i18n="nicknameLabel">Nickname</span><span data-i18n="scoreLabel">Score</span><span>LVL</span></div>

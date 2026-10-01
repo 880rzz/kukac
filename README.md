@@ -192,59 +192,28 @@ A Browser QA nemcsak betölti az oldalt, hanem seedelt játékmeneti regresszió
 - QA screenshot artifactok
 
 
-## Arcade ID, globális ranglista és játékosprofil
+## Arcade ID: tisztán helyi, GitHub Pages-kompatibilis
 
-A repó tartalmaz egy szerveroldali Arcade ID rendszert Vercel Functions + Neon Postgres környezethez.
+Az Arcade ID teljes egészében a böngészőben működik, szerver, cookie, Vercel és Neon nélkül.
 
 Funkciók:
 
-- egyedi nicknév + kötelező jelszó
-- a jelszó **nem visszafejthetően titkosítva**, hanem sózott `scrypt` hashként kerül tárolásra
-- 30 napos HttpOnly + SameSite=Lax + productionben Secure session cookie
-- cookie törlés után nicknév + jelszó párossal újra beléphető a fiók
-- regisztrációkor egyszer megjelenő recovery code; ezzel az elfelejtett nicknév visszakereshető
-- globális Top 50 arcade ranglista
-- a ranglistában a nicknév kattintható
-- publikus játékosstatisztika: rekord, legmagasabb szint, játékok, csillagok, érmék, kombó, megmentett csillagok, sárkány- és Royal statisztikák
-- szerveroldali game-run session
-- egy menet csak egyszer submitolható
-- alap plausibility/anti-cheat ellenőrzés
-- guest játék továbbra is támogatott
+- nicknév + legalább 8 karakteres jelszó/PIN
+- a jelszó csak sózott `PBKDF2-SHA-256` hashként tárolódik, 210 000 iterációval
+- több helyi profil egy böngészőben
+- helyi ranglista, kattintható nicknév és részletes profil-statisztika
+- profil- és statisztika-mentés `localStorage`-ban
+- letölthető JSON recovery backup és másolható recovery string
+- JSON vagy recovery string alapú visszaállítás tárhelytörlés után
+- belépés nélküli guest játék
+- teljes DE / TR / UK / HU / EN felület
 
-### Backend fájlok
+Fontos korlát: ez nem szerveroldali fiók. A jelszóhash, a profil és az eredmények a felhasználó saját böngészőjében vannak, ezért módosíthatók. GitHub Pages-only módban biztonságos globális ranglista, valódi globális nicknév-egyediség, szerveroldali anti-cheat és eszközök közötti automatikus szinkron nem valósítható meg. Tárhely- vagy cookie-törlés előtt recovery backupot kell exportálni.
 
-- `api/auth/register.js`
-- `api/auth/login.js`
-- `api/auth/logout.js`
-- `api/auth/me.js`
-- `api/auth/recover-nickname.js`
-- `api/leaderboard.js`
-- `api/player.js`
-- `api/game/start.js`
-- `api/game/submit.js`
-- `api/_lib/db.js`
-- `api/_lib/security.js`
-- `api/_lib/auth.js`
-- `api/_lib/http.js`
+## Ellenőrzés
 
-A PostgreSQL táblákat az API első sikeres adatbázis-kapcsolatakor `CREATE TABLE IF NOT EXISTS` műveletekkel hozza létre.
-
-## Vercel + Neon aktiválás
-
-A cloud account/ranglista funkcióhoz a GitHub Pages helyett a teljes repót Vercelen kell futtatni, ugyanazon origin alatt, hogy a HttpOnly session cookie stabilan működjön.
-
-1. Importáld a `880rzz/kukac` GitHub repót új Vercel projektként.
-2. A Vercel Marketplace-en csatlakoztass Neon Postgres adatbázist.
-3. Ellenőrizd, hogy a projekt Production/Preview környezetében elérhető a `DATABASE_URL`.
-4. Deploy.
-5. Nyisd meg az oldalt, és hozz létre egy teszt Arcade ID-t.
-6. A regisztrációnál megjelenő recovery code-ot mentsd el.
-7. Játssz egy menetet, majd ellenőrizd a globális ranglistát és a nicknévre kattintva a profil statisztikáját.
-
-Szükséges környezeti változó:
-
-```
-DATABASE_URL=<Neon Postgres connection string>
+```sh
+npm test
 ```
 
-A `.env.example` csak a kulcs nevét tartalmazza; secret értéket nem szabad commitolni.
+A GitHub Actions statikus ellenőrzést és Chromium-alapú desktop, tablet, mobil E2E tesztet futtat. Az E2E lefedi a profil-létrehozást, hibás és helyes belépést, több helyi profilt, rangsort, kattintható profilt, statisztikamentést, recovery-visszaállítást, guest módot és az öt nyelvet.
