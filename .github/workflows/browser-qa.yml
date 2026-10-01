@@ -46,6 +46,9 @@ jobs:
                 await page.goto('http://127.0.0.1:4173/?qa=1&seed=42', { waitUntil: 'networkidle' });
 
                 await page.waitForSelector('#startLangSelect');
+                if (await page.locator('#accountBtn').count() !== 1 || await page.locator('#leaderboardBtn').count() !== 1) {
+                  throw new Error(vp.name + ': Arcade ID controls missing');
+                }
                 for (const selector of ['#combo','#eventPill','#livesHud','#shieldHud']) {
                   if (await page.locator(selector).count() !== 1) throw new Error(vp.name + ': required HUD element missing ' + selector);
                 }
@@ -58,6 +61,12 @@ jobs:
                 const startText = (await page.locator('#startBtn').innerText()).trim();
                 if (startText !== 'START GAME') throw new Error(vp.name + ': language switching failed: ' + startText);
 
+                if (vp.name === 'desktop') {
+                  await page.click('#accountBtn');
+                  await page.waitForTimeout(100);
+                  if (await page.locator('#account').evaluate(el => getComputedStyle(el).display) === 'none') throw new Error('desktop: account overlay did not open');
+                  await page.click('#closeAccount');
+                }
                 await page.click('#startBtn');
                 await page.waitForTimeout(500);
                 if (await page.locator('#start').evaluate(el => getComputedStyle(el).display) !== 'none') {
