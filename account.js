@@ -21,8 +21,9 @@ async function api(path, options={}) {
   let body = {};
   try { body = await res.json(); } catch {}
   if (!res.ok) {
-    const err = new Error(body.error || 'request_failed');
-    err.code = body.error || 'request_failed';
+    const fallback = res.status === 404 && !body.error ? 'cloud_unavailable' : 'request_failed';
+    const err = new Error(body.error || fallback);
+    err.code = body.error || fallback;
     err.status = res.status;
     throw err;
   }
