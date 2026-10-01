@@ -136,7 +136,10 @@ jobs:
               await page.fill('#registerNickname','AuditBeta'); await page.fill('#registerPassword','beta-pass-42'); await page.fill('#registerPassword2','beta-pass-42'); await page.click('#registerForm button[type="submit"]');
               await page.waitForFunction(()=>window.KUKAC_ACCOUNT?.player?.nickname==='AuditBeta');
               await page.evaluate(()=>window.KUKAC_ACCOUNT.submitRun({score:40,level:1,stars:2,coins:0,bestCombo:1,starsRecovered:0,dragonSurvivals:0,royalStars:0}));
-              await page.click('#closeAccount'); await page.click('#leaderboardBtn',{force:true});
+              await page.click('#closeAccount');
+              await page.click('#startBtn');
+              await page.waitForFunction(()=>getComputedStyle(document.getElementById('start')).display==='none');
+              await page.click('#leaderboardBtn');
               if(await page.locator('#leaderboard').evaluate(el=>getComputedStyle(el).display)==='none')fail('leaderboard overlay did not open');
               await page.evaluate(()=>window.KUKAC_ACCOUNT.loadLeaderboard());
               await page.waitForFunction(()=>document.querySelectorAll('.leader-row strong').length>=2);
