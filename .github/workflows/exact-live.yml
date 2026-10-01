@@ -6,12 +6,16 @@ on:
       expected_sha:
         description: Expected main commit SHA
         required: true
+  workflow_run:
+    workflows: ["pages build and deployment"]
+    types: [completed]
 
 permissions:
   contents: read
 
 jobs:
   exact-live:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-node@v4
@@ -23,7 +27,7 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Audit production
         env:
-          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          EXPECTED_SHA: ${{ inputs.expected_sha || github.event.workflow_run.head_sha }}
         run: |
           node <<'NODE'
           const { chromium } = require('playwright');
