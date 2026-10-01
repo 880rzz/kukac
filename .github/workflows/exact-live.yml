@@ -75,9 +75,9 @@ jobs:
                 if(vp.name==='desktop'){
                   await page.keyboard.press('ArrowUp'); await page.waitForTimeout(100);
                   await page.keyboard.press('Space'); await page.waitForTimeout(100);
-                  const paused=await page.locator('#pause').evaluate(el=>getComputedStyle(el).display);
-                  if(paused==='none')fail('desktop: pause failed');
+                  if((await page.locator('#pauseBtn').innerText()).trim()!=='▶')fail('desktop: pause failed');
                   await page.keyboard.press('Space'); await page.waitForTimeout(100);
+                  if((await page.locator('#pauseBtn').innerText()).trim()!=='Ⅱ')fail('desktop: resume failed');
                 }else{
                   if(await page.locator('#boost').evaluate(el=>getComputedStyle(el).display)==='none')fail(vp.name+': boost unavailable');
                   const pad=page.locator('#dpad button').first();
