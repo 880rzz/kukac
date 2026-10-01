@@ -69,3 +69,19 @@ A hangeffektek nem hangfájlok: a játék futás közben, a **Web Audio API** se
 ## Reszponzivitás
 
 A kezelőfelület automatikusan alkalmazkodik desktop, tablet és mobil kijelzőhöz. Érintőkijelzőn a játék megjeleníti a D-padot és a BOOST gombot; asztali gépen ezek rejtve maradnak.
+
+
+## Mozgó szereplők és pályazavarás
+
+A pálya körül most 3D közönség, királynő, katonák és sárkányok mozognak. A játék során időnként betolakodók indulnak a csillag felé:
+
+- retro platformhős
+- katona
+- magasabb szinteken sárkány
+- a betolakodó elviheti az aktuális csillagot
+- csillaglopáskor 5 pont levonás jár
+- a csillag rövid idő után új helyen jelenik meg
+- ha egy betolakodó eltalálja a kukac fejét, a menet véget ér
+- a rajtaütések a szintekkel fokozatosan gyakoribbá válnak
+
+A retro platformhősök saját, eredeti low-poly karakterek; nem használnak Super Mario grafikát, modellt vagy hangmintát.
