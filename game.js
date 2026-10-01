@@ -518,6 +518,7 @@ window.addEventListener('resize',()=>{
 if(qaMode){
   window.__KUKAC_QA__={
     snapshot:()=>({lives:gameState.player.lifeCount,shield:gameState.player.shieldCharges,score,level,food:!!food,stolen:!!gameState.progression.stolenCollectible,dead:gameState.session.isDead,inBounds:snake.every(s=>Math.abs(Math.round(s.position.x))<=9&&Math.abs(Math.round(s.position.z))<=9)}),
+    resetTest:()=>{reset();gameState.session.isRunning=true;gameState.session.isPaused=true;return window.__KUKAC_QA__.snapshot()},
     collide:()=>{gameState.player.invulnerableUntilMs=0;handleCollision();return window.__KUKAC_QA__.snapshot()},
     setScore:v=>{score=v;updateHUD();return score},
     setLevel:v=>{level=v;return level},
