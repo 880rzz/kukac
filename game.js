@@ -7,7 +7,7 @@ const params=new URLSearchParams(location.search);
 const qaMode=params.get('qa')==='1';
 let rngSeed=Number(params.get('seed')||0)>>>0;
 function rand(){
-  if(!rngSeed)return rand();
+  if(!rngSeed)return Math.random();
   rngSeed=(rngSeed+0x6D2B79F5)>>>0;
   let t=rngSeed;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);
   return ((t^t>>>14)>>>0)/4294967296;
