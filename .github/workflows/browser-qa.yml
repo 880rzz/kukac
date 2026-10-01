@@ -93,6 +93,7 @@ jobs:
                   if (qa.c3.lives !== 5 || qa.c3.shield !== 0) throw new Error('desktop: shield hit 3 failed');
                   if (qa.c4.lives !== 4) throw new Error('desktop: first life loss failed');
                   if (qa.c5.lives !== 3) throw new Error('desktop: subsequent life loss failed');
+                  if (!qa.c1.inBounds || !qa.c2.inBounds || !qa.c3.inBounds || !qa.c4.inBounds || !qa.c5.inBounds) throw new Error('desktop: respawn placed snake outside arena');
                   if (!qa.collectible) throw new Error('desktop: collectible watchdog failed');
                   if (!qa.royal.royal || !qa.royal.foodRoyal) throw new Error('desktop: Royal Event failed');
                   if (!qa.dragon) throw new Error('desktop: Dragon Event failed');
