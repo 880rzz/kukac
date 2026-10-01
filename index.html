@@ -360,7 +360,8 @@ function spawnNpcRaid(now){
   if(edge===3)start.set(-8+Math.random()*16,.1,11.5);
   if(kind==='dragon')start.y=3.2;
   obj.position.copy(start);obj.lookAt(target.x,obj.position.y,target.z);
-  obj.userData={...obj.userData,kind,state:'in',start:start.clone(),target:target.clone(),born:now,speed:kind==='dragon'?.055:.075,steal:false};
+  obj.scale.multiplyScalar(kind==='dragon'?1.2:1.18);
+  obj.userData={...obj.userData,kind,state:'in',start:start.clone(),target:target.clone(),born:now,speed:kind==='dragon'?.06:.085,steal:false};
   npcGroup.add(obj);npcs.push(obj);
   showCombo(kind==='dragon'?t('raidDragon'):t('raidInvader'));
   sound('raid');
@@ -374,7 +375,7 @@ function updateNPCs(t){
   });
   if(running&&!paused&&!dead && t>nextNpcRaid){
     spawnNpcRaid(t);
-    nextNpcRaid=t+Math.max(3800,9000-level*650)+Math.random()*3500;
+    nextNpcRaid=t+Math.max(4200,7200-level*450)+Math.random()*2200;
   }
   npcs.slice().forEach(n=>{
     const d=n.userData;
@@ -384,7 +385,7 @@ function updateNPCs(t){
       const dest=food?food.position:d.target;
       const v=dest.clone().sub(n.position);v.y=d.kind==='dragon'?(dest.y+1.7-n.position.y):0;
       if(v.length()>.18){v.normalize();n.position.add(v.multiplyScalar(d.speed));n.lookAt(dest.x,n.position.y,dest.z);}
-      if(food && n.position.distanceTo(food.position)<.85){
+      if(food && n.position.distanceTo(food.position)<1.0){
         d.steal=true;d.state='out';
         addParticleBurst(food.position.clone(),0xff6b35,22);
         scene.remove(food);food=null;score=Math.max(0,score-5);updateHUD();showCombo(t('stolen'));sound('steal');
@@ -431,7 +432,7 @@ function clearActors(){
   while(particles.children.length)particles.remove(particles.children[0]);
 }
 function reset(){
-  clearActors();while(npcGroup.children.length)npcGroup.remove(npcGroup.children[0]);npcs=[];score=0;level=1;combo=0;dead=false;paused=false;baseInterval=155;direction={x:1,z:0};nextDirection={x:1,z:0};nextNpcRaid=performance.now()+5000;
+  clearActors();while(npcGroup.children.length)npcGroup.remove(npcGroup.children[0]);npcs=[];score=0;level=1;combo=0;dead=false;paused=false;baseInterval=155;direction={x:1,z:0};nextDirection={x:1,z:0};nextNpcRaid=performance.now()+2200;
   for(let i=0;i<4;i++){
     const s=sphereSegment(i===0);s.position.copy(gridPos(-i,0));scene.add(s);snake.push(s);
   }
@@ -643,6 +644,7 @@ function animate(t){
 window.addEventListener('resize',()=>{
   camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 });
+buildCrowd();
 reset();running=false;requestAnimationFrame(animate);
 })();
 </script>
