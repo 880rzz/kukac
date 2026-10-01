@@ -253,7 +253,8 @@ function reset(){
 function occupied(x,z){
   return snake.some(s=>Math.round(s.position.x)===x&&Math.round(s.position.z)===z) ||
     obstacles.some(o=>o.x===x&&o.z===z) ||
-    (food&&Math.round(food.position.x)===x&&Math.round(food.position.z)===z);
+    (food&&Math.round(food.position.x)===x&&Math.round(food.position.z)===z) ||
+    (coin&&Math.round(coin.position.x)===x&&Math.round(coin.position.z)===z);
 }
 function randomCell(){
   for(let tries=0;tries<500;tries++){
@@ -380,7 +381,7 @@ function move(){
 
   if(ate){
     combo=(performance.now()-comboTimer<2500)?combo+1:1;comboTimer=performance.now();
-    const bonus=Math.min(combo-1,5)*2;score+=10+bonus;addParticleBurst(food.position.clone(),0xffe866,24);sound('eat');showCombo(combo>1?'COMBO x'+combo:'+10');
+    const bonus=Math.min(combo-1,5)*2;score+=10+bonus;addParticleBurst(food.position.clone(),0xffe866,24);sound('eat');showCombo(combo>1?'COMBO x'+combo:' +10');
     spawnFood();maybeLevelUp();updateHUD();
   }
   if(gotCoin){
