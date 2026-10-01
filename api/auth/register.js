@@ -41,6 +41,7 @@ module.exports = async function handler(req, res) {
     json(res, 201, { player: publicPlayer(rows[0]), recoveryCode });
   } catch (err) {
     console.error(err);
+    if (err.code === '23505') return json(res, 409, { error: 'nickname_taken' });
     json(res, err.code === 'DB_NOT_CONFIGURED' ? 503 : 500, { error: err.code === 'DB_NOT_CONFIGURED' ? 'cloud_unavailable' : 'server_error' });
   }
 };
