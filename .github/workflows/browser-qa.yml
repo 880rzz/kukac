@@ -78,7 +78,7 @@ jobs:
                   const qa = await page.evaluate(() => {
                     const api = window.__KUKAC_QA__;
                     if (!api) return { error: 'QA API missing' };
-                    const initial = api.snapshot();
+                    const initial = api.resetTest();
                     const c1 = api.collide();
                     const c2 = api.collide();
                     const c3 = api.collide();
