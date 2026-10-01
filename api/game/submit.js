@@ -49,7 +49,7 @@ module.exports = async function handler(req, res) {
       starsRecovered <= stars + 50 &&
       royalStars <= stars + 10;
 
-    await q`
+    const claimed = await q`
       UPDATE game_runs SET
         finished_at = NOW(),
         score = ${score}, level = ${level}, stars = ${stars}, coins = ${coins},
@@ -57,8 +57,10 @@ module.exports = async function handler(req, res) {
         stars_recovered = ${starsRecovered}, dragon_survivals = ${dragonSurvivals},
         royal_stars = ${royalStars}, verified = ${plausible},
         reject_reason = ${plausible ? null : 'plausibility_check'}
-      WHERE id = ${runId} AND player_id = ${player.id}
+      WHERE id = ${runId} AND player_id = ${player.id} AND finished_at IS NULL
+      RETURNING id
     `;
+    if (!claimed[0]) return json(res, 409, { error: 'run_already_submitted' });
 
     if (!plausible) return json(res, 422, { error: 'score_rejected' });
 
