@@ -62,7 +62,7 @@ jobs:
                 if (startText !== 'START GAME') throw new Error(vp.name + ': language switching failed: ' + startText);
 
                 if (vp.name === 'desktop') {
-                  await page.click('#accountBtn');
+                  await page.click('#startIdentity');
                   await page.waitForTimeout(100);
                   if (await page.locator('#account').evaluate(el => getComputedStyle(el).display) === 'none') throw new Error('desktop: account overlay did not open');
                   await page.click('#closeAccount');
