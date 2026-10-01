@@ -317,9 +317,9 @@ const audio=window.KUKAC_AUDIO.create();
 function startAudioLayers(){audio.startLayers()}
 function updateAudioLayers(){audio.update({enabled:gameState.session.soundEnabled,lives:gameState.player.lifeCount,royal:gameState.progression.royalOn,stolen:!!gameState.progression.stolenCollectible})}
 function sound(type){audio.play(type,gameState.session.soundEnabled)}
-function flash(){const e=$('flash');e.classList.remove('go');void e.offsetWidth;e.classList.add('go')}
-function showCombo(txt){const e=$('gameState.session.comboCount');e.textContent=txt;e.classList.remove('show');void e.offsetWidth;e.classList.add('show')}
-function showEvent(txt,ms=2200){const e=$('eventPill');e.textContent=txt;e.classList.add('show');clearTimeout(e._timer);e._timer=setTimeout(()=>e.classList.remove('show'),ms)}
+function flash(){const e=$('flash');if(!e)return;e.classList.remove('go');void e.offsetWidth;e.classList.add('go')}
+function showCombo(txt){const e=$('combo');if(!e)return;e.textContent=txt;e.classList.remove('show');void e.offsetWidth;e.classList.add('show')}
+function showEvent(txt,ms=2200){const e=$('eventPill');if(!e)return;e.textContent=txt;e.classList.add('show');clearTimeout(e._timer);e._timer=setTimeout(()=>e.classList.remove('show'),ms)}
 function updateHUD(){
   $('score').textContent=score;$('level').textContent=level;$('best').textContent=best;
   $('nextLevel').textContent=level*LEVEL_STEP;
