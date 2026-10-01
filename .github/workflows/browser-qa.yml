@@ -87,7 +87,7 @@ jobs:
                   if (!await page.evaluate(() => window.KUKAC_ACCOUNT.player.highScore === 120 && window.KUKAC_ACCOUNT.player.totalGames === 1)) throw new Error('desktop: recovery stats failed');
                   await page.reload({waitUntil:'domcontentloaded'});
                   if (!await page.evaluate(() => window.KUKAC_ACCOUNT?.player?.nickname === 'Alpha')) throw new Error('desktop: profile persistence failed');
-                  await page.click('#accountBtn'); await page.click('#logoutBtn');
+                  await page.click('#startIdentity'); await page.click('#logoutBtn');
                   await page.fill('#loginNickname','Alpha'); await page.fill('#loginPassword','wrong-pass'); await page.click('#loginForm button[type="submit"]');
                   await page.waitForTimeout(250); if (await page.evaluate(() => Boolean(window.KUKAC_ACCOUNT.player))) throw new Error('desktop: wrong password accepted');
                   await page.fill('#loginPassword','alpha-pass-42'); await page.click('#loginForm button[type="submit"]'); await page.waitForFunction(() => window.KUKAC_ACCOUNT?.player?.nickname === 'Alpha');
