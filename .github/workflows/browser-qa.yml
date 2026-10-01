@@ -46,6 +46,9 @@ jobs:
                 await page.goto('http://127.0.0.1:4173/?qa=1&seed=42', { waitUntil: 'networkidle' });
 
                 await page.waitForSelector('#startLangSelect');
+                for (const selector of ['#combo','#eventPill','#livesHud','#shieldHud']) {
+                  if (await page.locator(selector).count() !== 1) throw new Error(vp.name + ': required HUD element missing ' + selector);
+                }
                 if (await page.locator('#startLangSelect').inputValue() !== 'de') {
                   throw new Error(vp.name + ': German is not the default language');
                 }
