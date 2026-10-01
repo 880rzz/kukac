@@ -115,6 +115,7 @@ canvas{display:block;width:100%;height:100%}
     <p><b>Szintek:</b> 80 pontonként új szint jön. A sebesség nő, a pálya hangulata megváltozik és több akadály jelenik meg.</p>
     <p><b>Boost:</b> Shift vagy mobilon a BOOST gomb. Gyorsabban mozogsz, így kockázatosabb, de látványosabb a játék.</p>
     <p><b>Irányítás:</b> nyilak / WASD, mobilon D-pad vagy húzógesztus. Space: szünet, R: újrakezdés, M: hang ki/be.</p>
+    <p><b>Betolakodók:</b> mozgó katonák, sárkányok és retro platformhősök időnként berohannak. Elvihetik a csillagot, és ha neked ütköznek, vége a menetnek.</p>
     <p><b>Rekord:</b> a böngésző helyben elmenti a legjobb pontszámodat.</p>
     <button class="primary" id="closeHelp">ÉRTEM</button>
   </div>
@@ -153,11 +154,14 @@ sun.shadow.mapSize.set(1024,1024); sun.shadow.camera.left=-18;sun.shadow.camera.
 const world=new THREE.Group(); scene.add(world);
 const deco=new THREE.Group(); scene.add(deco);
 const particles=new THREE.Group(); scene.add(particles);
+const npcGroup=new THREE.Group(); scene.add(npcGroup);
+const crowdGroup=new THREE.Group(); scene.add(crowdGroup);
 
 let snake=[], food=null, coin=null, obstacles=[], direction={x:1,z:0}, nextDirection={x:1,z:0};
 let score=0, level=1, best=Number(localStorage.getItem('kukac3d-best')||0);
 let running=false, paused=false, soundOn=true, dead=false, combo=0, comboTimer=0, lastMove=0;
 let baseInterval=155, boosting=false, shake=0, audioCtx=null;
+let npcs=[], crowd=[], nextNpcRaid=0;
 
 const $=id=>document.getElementById(id);
 $('best').textContent=best;
@@ -211,6 +215,120 @@ function buildWorld(){
 }
 buildWorld();
 
+
+function addPart(parent,geo,color,pos,rot){
+  const m=new THREE.Mesh(geo,mat(color,.52,.04));
+  m.position.set(pos[0],pos[1],pos[2]);
+  if(rot)m.rotation.set(rot[0],rot[1],rot[2]);
+  m.castShadow=true;parent.add(m);return m;
+}
+function makeHumanoid(kind='fan',shirt=0x3a83e8){
+  const g=new THREE.Group(),skin=0xf0b27a;
+  addPart(g,new THREE.SphereGeometry(.22,12,10),skin,[0,1.45,0]);
+  addPart(g,new THREE.BoxGeometry(.42,.62,.3),shirt,[0,1.02,0]);
+  addPart(g,new THREE.BoxGeometry(.14,.55,.14),0x26354a,[-.14,.48,0]);
+  addPart(g,new THREE.BoxGeometry(.14,.55,.14),0x26354a,[.14,.48,0]);
+  const la=addPart(g,new THREE.BoxGeometry(.12,.52,.12),skin,[-.31,1.02,0]);
+  const ra=addPart(g,new THREE.BoxGeometry(.12,.52,.12),skin,[.31,1.02,0]);
+  g.userData.arms=[la,ra];
+
+  if(kind==='queen'){
+    addPart(g,new THREE.ConeGeometry(.42,.62,14),0xe95cae,[0,.88,0]);
+    addPart(g,new THREE.CylinderGeometry(.19,.25,.18,10),0xffd447,[0,1.75,0]);
+    for(let i=0;i<5;i++)addPart(g,new THREE.ConeGeometry(.055,.16,6),0xffd447,[(i-2)*.08,1.91,0]);
+  } else if(kind==='soldier'){
+    addPart(g,new THREE.CylinderGeometry(.24,.27,.28,14),0xc7b37a,[0,1.67,0]);
+    addPart(g,new THREE.BoxGeometry(.08,.9,.08),0x6f4a2c,[.38,1.0,0]);
+  } else if(kind==='hero'){
+    addPart(g,new THREE.CylinderGeometry(.25,.25,.16,16),0xf04a3e,[0,1.7,0]);
+    addPart(g,new THREE.BoxGeometry(.34,.12,.28),0xf04a3e,[0,1.64,.08]);
+    addPart(g,new THREE.BoxGeometry(.34,.38,.31),0x2d61d5,[0,.89,0]);
+  }
+  g.scale.setScalar(kind==='queen'?1.05:.9);
+  return g;
+}
+function makeDragon(){
+  const g=new THREE.Group();
+  addPart(g,new THREE.SphereGeometry(.42,16,12),0x4caf50,[0,1.05,0]);
+  addPart(g,new THREE.ConeGeometry(.38,1.1,10),0x439a46,[0,.62,-.42],[Math.PI/2,0,0]);
+  const head=addPart(g,new THREE.SphereGeometry(.31,14,10),0x58bf55,[0,1.16,.48]);
+  addPart(g,new THREE.ConeGeometry(.09,.35,8),0xf0e0a0,[-.18,1.42,.53]);
+  addPart(g,new THREE.ConeGeometry(.09,.35,8),0xf0e0a0,[.18,1.42,.53]);
+  const wingGeo=new THREE.ConeGeometry(.42,.9,3);
+  const wl=addPart(g,wingGeo,0x2f7f43,[-.48,1.05,-.05],[0,0,-1.15]);
+  const wr=addPart(g,wingGeo,0x2f7f43,[.48,1.05,-.05],[0,0,1.15]);
+  g.userData.wings=[wl,wr];g.userData.head=head;g.scale.setScalar(1.15);return g;
+}
+function buildCrowd(){
+  while(crowdGroup.children.length)crowdGroup.remove(crowdGroup.children[0]);
+  crowd=[];const colors=[0xffd447,0x3d8bea,0xe85b4a,0x8f61d8,0x42b883];
+  for(let i=0;i<28;i++){
+    const side=i%4,along=-8+(i%7)*2.5;
+    const fan=makeHumanoid('fan',colors[i%colors.length]);
+    if(side===0)fan.position.set(along,0,-12.2);
+    if(side===1)fan.position.set(along,0,12.2);
+    if(side===2)fan.position.set(-12.2,0,along);
+    if(side===3)fan.position.set(12.2,0,along);
+    fan.rotation.y=side===0?0:side===1?Math.PI:side===2?Math.PI/2:-Math.PI/2;
+    fan.userData.phase=i*.7;crowdGroup.add(fan);crowd.push(fan);
+  }
+  const queen=makeHumanoid('queen',0xe95cae);queen.position.set(0,0,-13.2);crowdGroup.add(queen);crowd.push(queen);
+  for(let i=0;i<4;i++){
+    const s=makeHumanoid('soldier',0xb11f2b);s.position.set(-4.5+i*3,0,-12.8);crowdGroup.add(s);crowd.push(s);
+  }
+  const dragon=makeDragon();dragon.position.set(8.5,4.6,-14);dragon.userData.phase=1.7;crowdGroup.add(dragon);crowd.push(dragon);
+}
+function spawnNpcRaid(now){
+  if(!running||paused||dead||!food)return;
+  const kinds=level>=3?['hero','soldier','dragon']:['hero','soldier'];
+  const kind=kinds[Math.floor(Math.random()*kinds.length)];
+  const obj=kind==='dragon'?makeDragon():makeHumanoid(kind,kind==='hero'?0x38a169:0xb11f2b);
+  const edge=Math.floor(Math.random()*4),start=new THREE.Vector3(),target=food.position.clone();
+  if(edge===0)start.set(-11.5,.1,-8+Math.random()*16);
+  if(edge===1)start.set(11.5,.1,-8+Math.random()*16);
+  if(edge===2)start.set(-8+Math.random()*16,.1,-11.5);
+  if(edge===3)start.set(-8+Math.random()*16,.1,11.5);
+  if(kind==='dragon')start.y=3.2;
+  obj.position.copy(start);obj.lookAt(target.x,obj.position.y,target.z);
+  obj.userData={...obj.userData,kind,state:'in',start:start.clone(),target:target.clone(),born:now,speed:kind==='dragon'?.055:.075,steal:false};
+  npcGroup.add(obj);npcs.push(obj);
+  showCombo(kind==='dragon'?'SÁRKÁNY!':'BETOLAKODÓ!');
+  sound('raid');
+}
+function updateNPCs(t){
+  crowd.forEach((f,i)=>{
+    const a=f.userData.arms;
+    if(a){a[0].rotation.z=Math.sin(t*.006+f.userData.phase)*.65;a[1].rotation.z=-Math.sin(t*.006+f.userData.phase)*.65;}
+    f.position.y=Math.abs(Math.sin(t*.004+(f.userData.phase||i)))*.08;
+    if(f.userData.wings){f.userData.wings[0].rotation.y=Math.sin(t*.005)*.5;f.userData.wings[1].rotation.y=-Math.sin(t*.005)*.5;f.position.x=8.5+Math.sin(t*.0006)*4;}
+  });
+  if(running&&!paused&&!dead && t>nextNpcRaid){
+    spawnNpcRaid(t);
+    nextNpcRaid=t+Math.max(3800,9000-level*650)+Math.random()*3500;
+  }
+  npcs.slice().forEach(n=>{
+    const d=n.userData;
+    if(paused||dead)return;
+    if(d.wings){d.wings[0].rotation.y=Math.sin(t*.012)*.7;d.wings[1].rotation.y=-Math.sin(t*.012)*.7;}
+    if(d.state==='in'){
+      const dest=food?food.position:d.target;
+      const v=dest.clone().sub(n.position);v.y=d.kind==='dragon'?(dest.y+1.7-n.position.y):0;
+      if(v.length()>.18){v.normalize();n.position.add(v.multiplyScalar(d.speed));n.lookAt(dest.x,n.position.y,dest.z);}
+      if(food && n.position.distanceTo(food.position)<.85){
+        d.steal=true;d.state='out';
+        addParticleBurst(food.position.clone(),0xff6b35,22);
+        scene.remove(food);food=null;score=Math.max(0,score-5);updateHUD();showCombo('ELLopták! -5');sound('steal');
+        setTimeout(()=>{if(!food&&!dead)spawnFood()},520);
+      }
+    }else{
+      const v=d.start.clone().sub(n.position);
+      if(v.length()>.25){v.normalize();n.position.add(v.multiplyScalar(d.speed*1.25));}
+      else{npcGroup.remove(n);npcs=npcs.filter(x=>x!==n);}
+    }
+    if(snake[0] && n.position.distanceTo(snake[0].position)<.68){shake=.7;showCombo('ÜTKÖZÉS!');die();}
+  });
+}
+
 function sphereSegment(isHead=false){
   const g=new THREE.Group();
   const core=new THREE.Mesh(new THREE.SphereGeometry(isHead?.55:.47,20,16),isHead?headMat:(snake.length%2?bodyMat:bodyAlt));
@@ -243,7 +361,7 @@ function clearActors(){
   while(particles.children.length)particles.remove(particles.children[0]);
 }
 function reset(){
-  clearActors();score=0;level=1;combo=0;dead=false;paused=false;baseInterval=155;direction={x:1,z:0};nextDirection={x:1,z:0};
+  clearActors();while(npcGroup.children.length)npcGroup.remove(npcGroup.children[0]);npcs=[];score=0;level=1;combo=0;dead=false;paused=false;baseInterval=155;direction={x:1,z:0};nextDirection={x:1,z:0};nextNpcRaid=performance.now()+5000;
   for(let i=0;i<4;i++){
     const s=sphereSegment(i===0);s.position.copy(gridPos(-i,0));scene.add(s);snake.push(s);
   }
@@ -320,7 +438,8 @@ function sound(type){
   osc.connect(gain);gain.connect(audioCtx.destination);
   const sets={
     eat:[520,850,.11,'square'],coin:[900,1500,.16,'sine'],turn:[180,220,.025,'square'],
-    level:[330,880,.45,'triangle'],over:[220,80,.55,'sawtooth'],start:[260,660,.24,'triangle']
+    level:[330,880,.45,'triangle'],over:[220,80,.55,'sawtooth'],start:[260,660,.24,'triangle'],
+    raid:[180,420,.22,'square'],steal:[700,120,.28,'sawtooth']
   };
   const s=sets[type]||sets.eat;osc.type=s[3];osc.frequency.setValueAtTime(s[0],now);osc.frequency.exponentialRampToValueAtTime(Math.max(40,s[1]),now+s[2]);
   gain.gain.setValueAtTime(type==='turn'?.015:.11,now);gain.gain.exponentialRampToValueAtTime(.001,now+s[2]);
@@ -442,6 +561,7 @@ function animate(t){
   deco.children.forEach((c,i)=>{if(c.type==='Group')c.position.x+=Math.sin(t*.00012+i)*.002});
   snake.forEach((s,i)=>{s.position.y=.56+Math.sin(t*.008-i*.52)*.035});
   updateParticles();
+  updateNPCs(t);
 
   const targetX=direction.x*1.5,targetZ=direction.z*1.5;
   camera.position.x+=(targetX-camera.position.x)*.02;
