@@ -190,3 +190,61 @@ A Browser QA nemcsak betölti az oldalt, hanem seedelt játékmeneti regresszió
 - Royal Event aktiválható
 - Dragon Event aktiválható
 - QA screenshot artifactok
+
+
+## Arcade ID, globális ranglista és játékosprofil
+
+A repó tartalmaz egy szerveroldali Arcade ID rendszert Vercel Functions + Neon Postgres környezethez.
+
+Funkciók:
+
+- egyedi nicknév + kötelező jelszó
+- a jelszó **nem visszafejthetően titkosítva**, hanem sózott `scrypt` hashként kerül tárolásra
+- 30 napos HttpOnly + SameSite=Lax + productionben Secure session cookie
+- cookie törlés után nicknév + jelszó párossal újra beléphető a fiók
+- regisztrációkor egyszer megjelenő recovery code; ezzel az elfelejtett nicknév visszakereshető
+- globális Top 50 arcade ranglista
+- a ranglistában a nicknév kattintható
+- publikus játékosstatisztika: rekord, legmagasabb szint, játékok, csillagok, érmék, kombó, megmentett csillagok, sárkány- és Royal statisztikák
+- szerveroldali game-run session
+- egy menet csak egyszer submitolható
+- alap plausibility/anti-cheat ellenőrzés
+- guest játék továbbra is támogatott
+
+### Backend fájlok
+
+- `api/auth/register.js`
+- `api/auth/login.js`
+- `api/auth/logout.js`
+- `api/auth/me.js`
+- `api/auth/recover-nickname.js`
+- `api/leaderboard.js`
+- `api/player.js`
+- `api/game/start.js`
+- `api/game/submit.js`
+- `api/_lib/db.js`
+- `api/_lib/security.js`
+- `api/_lib/auth.js`
+- `api/_lib/http.js`
+
+A PostgreSQL táblákat az API első sikeres adatbázis-kapcsolatakor `CREATE TABLE IF NOT EXISTS` műveletekkel hozza létre.
+
+## Vercel + Neon aktiválás
+
+A cloud account/ranglista funkcióhoz a GitHub Pages helyett a teljes repót Vercelen kell futtatni, ugyanazon origin alatt, hogy a HttpOnly session cookie stabilan működjön.
+
+1. Importáld a `880rzz/kukac` GitHub repót új Vercel projektként.
+2. A Vercel Marketplace-en csatlakoztass Neon Postgres adatbázist.
+3. Ellenőrizd, hogy a projekt Production/Preview környezetében elérhető a `DATABASE_URL`.
+4. Deploy.
+5. Nyisd meg az oldalt, és hozz létre egy teszt Arcade ID-t.
+6. A regisztrációnál megjelenő recovery code-ot mentsd el.
+7. Játssz egy menetet, majd ellenőrizd a globális ranglistát és a nicknévre kattintva a profil statisztikáját.
+
+Szükséges környezeti változó:
+
+```
+DATABASE_URL=<Neon Postgres connection string>
+```
+
+A `.env.example` csak a kulcs nevét tartalmazza; secret értéket nem szabad commitolni.
