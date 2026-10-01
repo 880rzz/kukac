@@ -39,12 +39,12 @@ const starLight=new THREE.PointLight(0xffd34d,1.8,8,2);starLight.visible=false;s
 
 let snake=[], food=null, coin=null, obstacles=[], direction={x:1,z:0}, nextDirection={x:1,z:0};
 let score=0, level=1, best=Number(localStorage.getItem('kukac3d-best')||0);
-let running=false, paused=false, soundOn=true, dead=false, combo=0, comboTimer=0, lastMove=0;
 let baseInterval=155, boosting=false, shake=0, audioCtx=null;
 let npcs=[], crowd=[], nextNpcRaid=Infinity;
-let starsCollected=0, invasionUnlocked=false, stolenStar=null, royalActive=false, royalUntil=0, nextRoyalScore=160, dragonEventDone=false;
 const gameState={
   player:{lifeCount:5,shieldCharges:3,invulnerableUntilMs:0},
+  session:{isRunning:false,isPaused:false,isDead:false,soundEnabled:true,comboCount:0,comboAt:0,lastStepAt:0},
+  progression:{starCount:0,invasionReady:false,stolenCollectible:null,royalOn:false,royalDeadline:0,royalNextAt:160,dragonTriggered:false},
   world:{crowdMood:'calm',crowdMoodUntil:0},
   audio:{ambience:null,tension:null},
   qa:{enabled:qaMode}
@@ -194,9 +194,9 @@ function crowdStartFor(kind){
   return source?source.position.clone():new THREE.Vector3(0,.1,-11.5);
 }
 function spawnNpcRaid(now,forcedKind=null){
-  if(!running||paused||dead)return;
+  if(!gameState.session.isRunning||gameState.session.isPaused||gameState.session.isDead)return;
   let pool=level>=4?['hero','soldier','dragon']:level>=2?['hero','soldier']:['hero'];
-  if(stolenStar)pool=['soldier'];
+  if(gameState.progression.stolenCollectible)pool=['soldier'];
   const kind=forcedKind||pool[Math.floor(rand()*pool.length)];
   const obj=kind==='dragon'?makeDragon():makeHumanoid(kind,kind==='hero'?0x38a169:0xb11f2b);
   const start=crowdStartFor(kind);
@@ -210,20 +210,20 @@ function spawnNpcRaid(now,forcedKind=null){
   showCombo(kind==='dragon'?t('raidDragon'):t('raidInvader'));sound('raid');
 }
 function triggerRoyalEvent(t){
-  if(royalActive||dead)return;
-  royalActive=true;royalUntil=t+10000;nextRoyalScore+=160;showEvent(t('eventRoyal'),3200);sound('level');setCrowdMood('celebrate',3200);haptic([40,40,80]);
+  if(gameState.progression.royalOn||gameState.session.isDead)return;
+  gameState.progression.royalOn=true;gameState.progression.royalDeadline=t+10000;gameState.progression.royalNextAt+=160;showEvent(t('eventRoyal'),3200);sound('level');setCrowdMood('celebrate',3200);haptic([40,40,80]);
   if(food){food.userData.royal=true;food.scale.setScalar(1.35);starLight.intensity=2.8;}
   const queen=crowd.find(x=>x.userData.kind==='queen');if(queen)queen.scale.setScalar(1.22);
-  setTimeout(()=>{if(running&&!dead)spawnNpcRaid(performance.now(),'soldier')},650);
-  setTimeout(()=>{if(running&&!dead)spawnNpcRaid(performance.now(),'soldier')},1200);
+  setTimeout(()=>{if(gameState.session.isRunning&&!gameState.session.isDead)spawnNpcRaid(performance.now(),'soldier')},650);
+  setTimeout(()=>{if(gameState.session.isRunning&&!gameState.session.isDead)spawnNpcRaid(performance.now(),'soldier')},1200);
 }
 function triggerDragonEvent(t){
-  if(dragonEventDone||level<4)return;
-  dragonEventDone=true;showEvent(t('eventDragon'),3200);sound('raid');setCrowdMood('danger',3500);haptic([80,50,80]);
+  if(gameState.progression.dragonTriggered||level<4)return;
+  gameState.progression.dragonTriggered=true;showEvent(t('eventDragon'),3200);sound('raid');setCrowdMood('danger',3500);haptic([80,50,80]);
   const ring=new THREE.Mesh(new THREE.RingGeometry(.8,1.08,32),new THREE.MeshBasicMaterial({color:0xff4b35,transparent:true,opacity:.72,side:THREE.DoubleSide}));
   ring.rotation.x=-Math.PI/2;const target=food?food.position:snake[0].position;ring.position.set(target.x,.08,target.z);scene.add(ring);
   let pulse=0;const warn=setInterval(()=>{pulse++;ring.scale.setScalar(1+(pulse%2)*.35);ring.material.opacity=pulse%2?.35:.72},140);
-  setTimeout(()=>{clearInterval(warn);scene.remove(ring);if(running&&!dead)spawnNpcRaid(performance.now(),'dragon')},1100);
+  setTimeout(()=>{clearInterval(warn);scene.remove(ring);if(gameState.session.isRunning&&!gameState.session.isDead)spawnNpcRaid(performance.now(),'dragon')},1100);
 }
 function updateNPCs(t){
   if(t>gameState.world.crowdMoodUntil)gameState.world.crowdMood='calm';
@@ -234,28 +234,28 @@ function updateNPCs(t){
     f.position.y=Math.abs(Math.sin(t*.005+(f.userData.phase||i)))*(.05+moodAmp*.06);
     if(f.userData.wings){f.userData.wings[0].rotation.y=Math.sin(t*.005)*.5;f.userData.wings[1].rotation.y=-Math.sin(t*.005)*.5;f.position.x=8.5+Math.sin(t*.0006)*4}
   });
-  if(royalActive&&t>royalUntil){royalActive=false;const queen=crowd.find(x=>x.userData.kind==='queen');if(queen)queen.scale.setScalar(1.05)}
-  if(invasionUnlocked&&running&&!paused&&!dead&&t>nextNpcRaid){
+  if(gameState.progression.royalOn&&t>gameState.progression.royalDeadline){gameState.progression.royalOn=false;const queen=crowd.find(x=>x.userData.kind==='queen');if(queen)queen.scale.setScalar(1.05)}
+  if(gameState.progression.invasionReady&&gameState.session.isRunning&&!gameState.session.isPaused&&!gameState.session.isDead&&t>nextNpcRaid){
     spawnNpcRaid(t);nextNpcRaid=t+Math.max(5000,9000-level*450)+rand()*2400;
   }
-  if(score>=nextRoyalScore)triggerRoyalEvent(t);
+  if(score>=gameState.progression.royalNextAt)triggerRoyalEvent(t);
   triggerDragonEvent(t);
 
   // Star-state watchdog: the game must never remain permanently without a collectible.
-  if(!food&&!stolenStar&&running&&!dead)spawnFood();
-  if(stolenStar){
-    const owner=stolenStar.userData.thief;
+  if(!food&&!gameState.progression.stolenCollectible&&gameState.session.isRunning&&!gameState.session.isDead)spawnFood();
+  if(gameState.progression.stolenCollectible){
+    const owner=gameState.progression.stolenCollectible.userData.thief;
     const ownerAlive=owner&&npcs.includes(owner)&&owner.userData.state==='escape';
     const stolenTooLong=ownerAlive&&owner.userData.stolenAt&&t-owner.userData.stolenAt>9000;
     if(!ownerAlive||stolenTooLong){
       if(ownerAlive){npcGroup.remove(owner);npcs=npcs.filter(x=>x!==owner)}
-      scene.remove(stolenStar);stolenStar=null;
-      if(running&&!dead)spawnFood();
+      scene.remove(gameState.progression.stolenCollectible);gameState.progression.stolenCollectible=null;
+      if(gameState.session.isRunning&&!gameState.session.isDead)spawnFood();
     }
   }
 
   npcs.slice().forEach(n=>{
-    const d=n.userData;if(paused||dead)return;
+    const d=n.userData;if(gameState.session.isPaused||gameState.session.isDead)return;
     if(d.wings){d.wings[0].rotation.y=Math.sin(t*.012)*.7;d.wings[1].rotation.y=-Math.sin(t*.012)*.7}
     let dest;
     if(d.state==='escape')dest=d.start;
@@ -269,19 +269,19 @@ function updateNPCs(t){
     if(d.role==='thief'&&d.state==='in'&&food){
       const dx=n.position.x-food.position.x,dz=n.position.z-food.position.z;
       if(Math.hypot(dx,dz)<1.0){
-        d.state='escape';d.steal=true;d.stolenAt=t;stolenStar=food;food=null;
-        stolenStar.userData.thief=n;setCrowdMood('danger',1800);haptic([70,40,70]);showCombo(t('stolen'));sound('steal');showEvent(t('stolen'),1700);
+        d.state='escape';d.steal=true;d.stolenAt=t;gameState.progression.stolenCollectible=food;food=null;
+        gameState.progression.stolenCollectible.userData.thief=n;setCrowdMood('danger',1800);haptic([70,40,70]);showCombo(t('stolen'));sound('steal');showEvent(t('stolen'),1700);
       }
     }
-    if(d.state==='escape'&&stolenStar&&stolenStar.userData.thief===n){
-      stolenStar.position.set(n.position.x,n.position.y+1.35,n.position.z);stolenStar.rotation.y+=.12;starLight.position.set(stolenStar.position.x,stolenStar.position.y+.4,stolenStar.position.z);
+    if(d.state==='escape'&&gameState.progression.stolenCollectible&&gameState.progression.stolenCollectible.userData.thief===n){
+      gameState.progression.stolenCollectible.position.set(n.position.x,n.position.y+1.35,n.position.z);gameState.progression.stolenCollectible.rotation.y+=.12;starLight.position.set(gameState.progression.stolenCollectible.position.x,gameState.progression.stolenCollectible.position.y+.4,gameState.progression.stolenCollectible.position.z);
       if(snake[0]&&Math.hypot(n.position.x-snake[0].position.x,n.position.z-snake[0].position.z)<1.05){
-        score+=20;addParticleBurst(stolenStar.position.clone(),0xffe866,34);scene.remove(stolenStar);stolenStar=null;
+        score+=20;addParticleBurst(gameState.progression.stolenCollectible.position.clone(),0xffe866,34);scene.remove(gameState.progression.stolenCollectible);gameState.progression.stolenCollectible=null;
         setCrowdMood('celebrate',1800);haptic([35,25,80]);showCombo(t('starSaved'));sound('coin');npcGroup.remove(n);npcs=npcs.filter(x=>x!==n);spawnFood();updateHUD();return;
       }
       if(Math.hypot(n.position.x-d.start.x,n.position.z-d.start.z)<.45){
-        score=Math.max(0,score-5);scene.remove(stolenStar);stolenStar=null;showCombo(t('stolen'));updateHUD();
-        npcGroup.remove(n);npcs=npcs.filter(x=>x!==n);setTimeout(()=>{if(!food&&!dead)spawnFood()},350);return;
+        score=Math.max(0,score-5);scene.remove(gameState.progression.stolenCollectible);gameState.progression.stolenCollectible=null;showCombo(t('stolen'));updateHUD();
+        npcGroup.remove(n);npcs=npcs.filter(x=>x!==n);setTimeout(()=>{if(!food&&!gameState.session.isDead)spawnFood()},350);return;
       }
     } else if(d.state==='escape'&&Math.hypot(n.position.x-d.start.x,n.position.z-d.start.z)<.45){
       npcGroup.remove(n);npcs=npcs.filter(x=>x!==n);return;
@@ -324,11 +324,11 @@ function clearActors(){
   while(particles.children.length)particles.remove(particles.children[0]);
 }
 function reset(){
-  clearActors();while(npcGroup.children.length)npcGroup.remove(npcGroup.children[0]);npcs=[];if(stolenStar)scene.remove(stolenStar);stolenStar=null;score=0;level=1;combo=0;gameState.player.lifeCount=5;gameState.player.shieldCharges=3;gameState.player.invulnerableUntilMs=0;gameState.world.crowdMood='calm';gameState.world.crowdMoodUntil=0;starsCollected=0;invasionUnlocked=false;royalActive=false;royalUntil=0;nextRoyalScore=160;dragonEventDone=false;dead=false;paused=false;baseInterval=155;direction={x:1,z:0};nextDirection={x:1,z:0};nextNpcRaid=Infinity;
+  clearActors();while(npcGroup.children.length)npcGroup.remove(npcGroup.children[0]);npcs=[];if(gameState.progression.stolenCollectible)scene.remove(gameState.progression.stolenCollectible);gameState.progression.stolenCollectible=null;score=0;level=1;gameState.session.comboCount=0;gameState.player.lifeCount=5;gameState.player.shieldCharges=3;gameState.player.invulnerableUntilMs=0;gameState.world.crowdMood='calm';gameState.world.crowdMoodUntil=0;gameState.progression.starCount=0;gameState.progression.invasionReady=false;gameState.progression.royalOn=false;gameState.progression.royalDeadline=0;gameState.progression.royalNextAt=160;gameState.progression.dragonTriggered=false;gameState.session.isDead=false;gameState.session.isPaused=false;baseInterval=155;direction={x:1,z:0};nextDirection={x:1,z:0};nextNpcRaid=Infinity;
   for(let i=0;i<4;i++){
     const s=sphereSegment(i===0);s.position.copy(gridPos(-i,0));scene.add(s);snake.push(s);
   }
-  rotateHead();spawnFood();buildObstacles();updateHUD();applyTheme();lastMove=performance.now();
+  rotateHead();spawnFood();buildObstacles();updateHUD();applyTheme();gameState.session.lastStepAt=performance.now();
 }
 
 function occupied(x,z){
@@ -405,12 +405,12 @@ function startAudioLayers(){
 function updateAudioLayers(){
   if(!gameState.audio.ambience)return;
   const now=audioCtx.currentTime;
-  const tension=Math.max(0,(3-gameState.player.lifeCount))*.002+(royalActive?.003:0)+(stolenStar?.004:0);
+  const tension=Math.max(0,(3-gameState.player.lifeCount))*.002+(gameState.progression.royalOn?.003:0)+(gameState.progression.stolenCollectible?.004:0);
   gameState.audio.tension.gain.gain.setTargetAtTime(tension,now,.18);
-  gameState.audio.ambience.gain.gain.setTargetAtTime(soundOn?.006:0,now,.18);
+  gameState.audio.ambience.gain.gain.setTargetAtTime(gameState.session.soundEnabled?.006:0,now,.18);
 }
 function sound(type){
-  if(!soundOn)return;
+  if(!gameState.session.soundEnabled)return;
   if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();
   const now=audioCtx.currentTime;
   const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();
@@ -425,7 +425,7 @@ function sound(type){
   osc.start(now);osc.stop(now+s[2]);
 }
 function flash(){const e=$('flash');e.classList.remove('go');void e.offsetWidth;e.classList.add('go')}
-function showCombo(txt){const e=$('combo');e.textContent=txt;e.classList.remove('show');void e.offsetWidth;e.classList.add('show')}
+function showCombo(txt){const e=$('gameState.session.comboCount');e.textContent=txt;e.classList.remove('show');void e.offsetWidth;e.classList.add('show')}
 function showEvent(txt,ms=2200){const e=$('eventPill');e.textContent=txt;e.classList.add('show');clearTimeout(e._timer);e._timer=setTimeout(()=>e.classList.remove('show'),ms)}
 function updateHUD(){
   $('score').textContent=score;$('level').textContent=level;$('best').textContent=best;
@@ -482,10 +482,10 @@ function respawnAfterHit(){
   npcs.slice().forEach(n=>{
     if(Math.hypot(n.position.x,n.position.z)<5){npcGroup.remove(n);npcs=npcs.filter(x=>x!==n)}
   });
-  gameState.player.invulnerableUntilMs=performance.now()+1300;lastMove=performance.now();
+  gameState.player.invulnerableUntilMs=performance.now()+1300;gameState.session.lastStepAt=performance.now();
 }
 function handleCollision(){
-  if(dead||performance.now()<gameState.player.invulnerableUntilMs)return;
+  if(gameState.session.isDead||performance.now()<gameState.player.invulnerableUntilMs)return;
   shake=.7;flash();
   if(gameState.player.lifeCount===5&&gameState.player.shieldCharges>0){
     gameState.player.shieldCharges--;playShieldBounce();
@@ -501,7 +501,7 @@ function handleCollision(){
   respawnAfterHit();
 }
 function die(){
-  if(dead)return;dead=true;running=false;shake=.55;sound('over');
+  if(gameState.session.isDead)return;gameState.session.isDead=true;gameState.session.isRunning=false;shake=.55;sound('over');
   if(score>best){best=score;localStorage.setItem('kukac3d-best',best);updateHUD()}
   setTimeout(()=>{ $('resultText').innerHTML=t('result')(score,level,best);$('gameover').style.display='grid';},350);
 }
@@ -531,12 +531,12 @@ function move(){
   rotateHead();
 
   if(ate){
-    combo=(performance.now()-comboTimer<2500)?combo+1:1;comboTimer=performance.now();
+    gameState.session.comboCount=(performance.now()-gameState.session.comboAt<2500)?gameState.session.comboCount+1:1;gameState.session.comboAt=performance.now();
     const royalBonus=food.userData.royal?40:0;
-    const bonus=Math.min(combo-1,5)*2,boostBonus=boosting?5:0;score+=10+bonus+boostBonus+royalBonus;starsCollected++;
+    const bonus=Math.min(gameState.session.comboCount-1,5)*2,boostBonus=boosting?5:0;score+=10+bonus+boostBonus+royalBonus;gameState.progression.starCount++;
     setCrowdMood('celebrate',1400);haptic(food.userData.royal?[45,30,90]:35);
-    addParticleBurst(food.position.clone(),0xffe866,food.userData.royal?42:24);sound(food.userData.royal?'coin':'eat');showCombo(food.userData.royal?t('royalStar')+' +'+(10+bonus+boostBonus+royalBonus):(boosting?t('boostBonus')+' +'+(10+bonus+boostBonus):(combo>1?'COMBO x'+combo:' +10')));
-    if(starsCollected>=2&&!invasionUnlocked){invasionUnlocked=true;nextNpcRaid=performance.now()+1600;showEvent(t('raidInvader'),1800)}
+    addParticleBurst(food.position.clone(),0xffe866,food.userData.royal?42:24);sound(food.userData.royal?'coin':'eat');showCombo(food.userData.royal?t('royalStar')+' +'+(10+bonus+boostBonus+royalBonus):(boosting?t('boostBonus')+' +'+(10+bonus+boostBonus):(gameState.session.comboCount>1?'COMBO x'+gameState.session.comboCount:' +10')));
+    if(gameState.progression.starCount>=2&&!gameState.progression.invasionReady){gameState.progression.invasionReady=true;nextNpcRaid=performance.now()+1600;showEvent(t('raidInvader'),1800)}
     spawnFood();maybeLevelUp();updateHUD();
   }
   if(gotCoin){
@@ -544,20 +544,20 @@ function move(){
   }
 }
 function setDir(x,z){
-  if(!running||paused)return;
+  if(!gameState.session.isRunning||gameState.session.isPaused)return;
   if(direction.x===-x&&direction.z===-z)return;
   nextDirection={x,z};sound('turn');
 }
 function togglePause(){
-  if(dead||!running)return;paused=!paused;$('pauseBtn').textContent=paused?'▶':'Ⅱ';showCombo(paused?t('pause'):t('go'));
+  if(gameState.session.isDead||!gameState.session.isRunning)return;gameState.session.isPaused=!gameState.session.isPaused;$('pauseBtn').textContent=gameState.session.isPaused?'▶':'Ⅱ';showCombo(gameState.session.isPaused?t('pause'):t('go'));
 }
-function toggleSound(){soundOn=!soundOn;$('soundBtn').textContent=soundOn?'🔊':'🔇';if(soundOn)sound('turn')}
+function toggleSound(){gameState.session.soundEnabled=!gameState.session.soundEnabled;$('soundBtn').textContent=gameState.session.soundEnabled?'🔊':'🔇';if(gameState.session.soundEnabled)sound('turn')}
 function startGame(){
   if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();
   if(audioCtx.state==='suspended')audioCtx.resume();startAudioLayers();
-  $('start').style.display='none';$('gameover').style.display='none';reset();running=true;sound('start');
+  $('start').style.display='none';$('gameover').style.display='none';reset();gameState.session.isRunning=true;sound('start');
 }
-function restart(){ $('gameover').style.display='none';reset();running=true;sound('start') }
+function restart(){ $('gameover').style.display='none';reset();gameState.session.isRunning=true;sound('start') }
 
 window.addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
@@ -592,11 +592,11 @@ window.addEventListener('touchend',e=>{
 
 function animate(t){
   requestAnimationFrame(animate);
-  if(running&&!paused&&!dead){
+  if(gameState.session.isRunning&&!gameState.session.isPaused&&!gameState.session.isDead){
     const interval=boosting?Math.max(48,baseInterval*.58):baseInterval;
-    if(t-lastMove>interval){move();lastMove=t}
+    if(t-gameState.session.lastStepAt>interval){move();gameState.session.lastStepAt=t}
   }
-  if(food){food.rotation.y+=.035;food.position.y=.68+Math.sin(t*.004)*.12;starLight.visible=true;starLight.position.set(food.position.x,food.position.y+.35,food.position.z);starLight.intensity=(food.userData.royal?2.8:1.8)+Math.sin(t*.008)*.35}else if(!stolenStar)starLight.visible=false
+  if(food){food.rotation.y+=.035;food.position.y=.68+Math.sin(t*.004)*.12;starLight.visible=true;starLight.position.set(food.position.x,food.position.y+.35,food.position.z);starLight.intensity=(food.userData.royal?2.8:1.8)+Math.sin(t*.008)*.35}else if(!gameState.progression.stolenCollectible)starLight.visible=false
   if(coin){coin.rotation.y+=.08;coin.rotation.x+=.025;coin.position.y=.75+Math.sin(t*.006)*.14}
   deco.children.forEach((c,i)=>{if(c.type==='Group')c.position.x+=Math.sin(t*.00012+i)*.002});
   snake.forEach((s,i)=>{s.position.y=.56+Math.sin(t*.008-i*.52)*.035});
@@ -615,21 +615,21 @@ function animate(t){
   camera.lookAt(0,0,0);
   renderer.render(scene,camera);
 }
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&running&&!paused&&!dead){paused=true;$('pauseBtn').textContent='▶';showCombo(t('pause'))}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&gameState.session.isRunning&&!gameState.session.isPaused&&!gameState.session.isDead){gameState.session.isPaused=true;$('pauseBtn').textContent='▶';showCombo(t('pause'))}});
 window.addEventListener('orientationchange',()=>setTimeout(()=>window.dispatchEvent(new Event('resize')),120));
 window.addEventListener('resize',()=>{
   camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 });
 if(qaMode){
   window.__KUKAC_QA__={
-    snapshot:()=>({lives:gameState.player.lifeCount,shield:gameState.player.shieldCharges,score,level,food:!!food,stolen:!!stolenStar,dead}),
+    snapshot:()=>({lives:gameState.player.lifeCount,shield:gameState.player.shieldCharges,score,level,food:!!food,stolen:!!gameState.progression.stolenCollectible,gameState.session.isDead}),
     collide:()=>{gameState.player.invulnerableUntilMs=0;handleCollision();return window.__KUKAC_QA__.snapshot()},
     setScore:v=>{score=v;updateHUD();return score},
     setLevel:v=>{level=v;return level},
     forceInvasion:kind=>spawnNpcRaid(performance.now(),kind),
-    ensureCollectible:()=>{if(!food&&!stolenStar)spawnFood();return !!food}
+    ensureCollectible:()=>{if(!food&&!gameState.progression.stolenCollectible)spawnFood();return !!food}
   };
 }
 buildCrowd();
-reset();running=false;requestAnimationFrame(animate);
+reset();gameState.session.isRunning=false;requestAnimationFrame(animate);
 })();
