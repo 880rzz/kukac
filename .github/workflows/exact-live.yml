@@ -1,0 +1,151 @@
+name: KUKAC Exact-Live Production Audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Expected main commit SHA
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  exact-live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Audit production
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright');
+          const URL='https://kukac.vipach.at/';
+          const viewports=[
+            {name:'desktop',width:1440,height:900},
+            {name:'tablet',width:834,height:1112},
+            {name:'mobile',width:390,height:844}
+          ];
+          const fail=(m)=>{throw new Error(m)};
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            try{
+              for(const vp of viewports){
+                const context=await browser.newContext({viewport:{width:vp.width,height:vp.height}});
+                const page=await context.newPage();
+                const errors=[],rejects=[],failed=[];
+                page.on('pageerror',e=>errors.push(String(e)));
+                page.on('console',m=>{if(m.type()==='error')errors.push('console:'+m.text())});
+                page.on('requestfailed',r=>failed.push(r.url()+':'+(r.failure()?.errorText||'failed')));
+                await page.addInitScript(()=>addEventListener('unhandledrejection',e=>{window.__auditRejects=(window.__auditRejects||[]).concat(String(e.reason))}));
+                const response=await page.goto(URL+'?audit='+Date.now(),{waitUntil:'networkidle',timeout:60000});
+                if(!response||response.status()!==200)fail(vp.name+': production HTTP '+(response?.status()));
+                const server=response.headers()['server']||'';
+                if(!/github/i.test(server))fail(vp.name+': production is not identified as GitHub Pages; server='+server);
+                if(await page.locator('canvas').count()!==1)fail(vp.name+': 3D canvas missing');
+                const canvas=await page.locator('canvas').boundingBox();
+                if(!canvas||canvas.width<100||canvas.height<100)fail(vp.name+': invalid canvas geometry');
+                for(const locale of ['de','tr','uk','hu','en']){
+                  await page.selectOption('#startLangSelect',locale);
+                  const start=(await page.locator('#startBtn').innerText()).trim();
+                  if(!start)fail(vp.name+': empty translated start text '+locale);
+                  await page.click('#startIdentity');
+                  const accountTitle=(await page.locator('#account h2').innerText()).trim();
+                  const login=(await page.locator('[data-account-mode="login"]').innerText()).trim();
+                  if(!accountTitle||!login)fail(vp.name+': account translation missing '+locale);
+                  await page.click('#closeAccount');
+                }
+                await page.selectOption('#startLangSelect','en');
+                const guest=(await page.locator('#startIdentity').innerText()).trim();
+                if(!/guest/i.test(guest))fail(vp.name+': guest state not visible');
+                await page.click('#startBtn');
+                await page.waitForTimeout(700);
+                if(await page.locator('#start').evaluate(el=>getComputedStyle(el).display)!=='none')fail(vp.name+': start overlay stayed open');
+                if(vp.name==='desktop'){
+                  await page.keyboard.press('ArrowUp'); await page.waitForTimeout(100);
+                  await page.keyboard.press('Space'); await page.waitForTimeout(100);
+                  const paused=await page.locator('#pause').evaluate(el=>getComputedStyle(el).display);
+                  if(paused==='none')fail('desktop: pause failed');
+                  await page.keyboard.press('Space'); await page.waitForTimeout(100);
+                }else{
+                  if(await page.locator('#boost').evaluate(el=>getComputedStyle(el).display)==='none')fail(vp.name+': boost unavailable');
+                  const pad=page.locator('#dpad button').first();
+                  if(await pad.count())await pad.tap();
+                }
+                const unhandled=await page.evaluate(()=>window.__auditRejects||[]);
+                if(errors.length)fail(vp.name+': JS errors: '+errors.join(' | '));
+                if(unhandled.length)fail(vp.name+': unhandled rejections: '+unhandled.join(' | '));
+                if(failed.filter(x=>!x.includes('favicon')).length)fail(vp.name+': failed requests: '+failed.join(' | '));
+                await page.screenshot({path:'live-'+vp.name+'.png',fullPage:true});
+                await context.close();
+              }
+
+              const context=await browser.newContext({viewport:{width:1440,height:900}});
+              const page=await context.newPage();
+              const errors=[];
+              page.on('pageerror',e=>errors.push(String(e)));
+              await page.goto(URL+'?account-audit='+Date.now(),{waitUntil:'networkidle'});
+              await page.selectOption('#startLangSelect','en');
+              await page.click('#startIdentity');
+              await page.click('[data-account-mode="register"]');
+              await page.fill('#registerNickname','AuditAlpha');
+              await page.fill('#registerPassword','alpha-pass-42');
+              await page.fill('#registerPassword2','mismatch-pass');
+              await page.click('#registerForm button[type="submit"]');
+              await page.waitForTimeout(150);
+              if(await page.evaluate(()=>Boolean(window.KUKAC_ACCOUNT?.player)))fail('password mismatch accepted');
+              await page.fill('#registerPassword2','alpha-pass-42');
+              await page.click('#registerForm button[type="submit"]');
+              await page.waitForFunction(()=>window.KUKAC_ACCOUNT?.player?.nickname==='AuditAlpha');
+              const raw=await page.evaluate(()=>localStorage.getItem('kukac3d-arcade-profiles-v1'));
+              if(raw.includes('alpha-pass-42'))fail('raw password stored');
+              const stored=JSON.parse(raw).profiles[0];
+              if(stored.kdf!=='PBKDF2-SHA-256'||stored.iterations!==210000||!stored.salt||!stored.hash)fail('PBKDF2 metadata invalid');
+              await page.evaluate(()=>window.KUKAC_ACCOUNT.submitRun({score:120,level:3,stars:8,coins:2,bestCombo:4,starsRecovered:1,dragonSurvivals:1,royalStars:1}));
+              const backup=await page.evaluate(()=>window.KUKAC_ACCOUNT.__test.backupFor('AuditAlpha'));
+              const recovery=await page.evaluate(b=>{const bytes=new TextEncoder().encode(JSON.stringify(b));return 'KUKAC1.'+btoa(String.fromCharCode(...bytes))},backup);
+              if(JSON.stringify(backup).includes('alpha-pass-42')||recovery.includes('alpha-pass-42'))fail('recovery contains raw password');
+
+              await page.click('#logoutBtn'); await page.click('[data-account-mode="register"]');
+              await page.fill('#registerNickname','AuditAlpha'); await page.fill('#registerPassword','other-pass-42'); await page.fill('#registerPassword2','other-pass-42'); await page.click('#registerForm button[type="submit"]');
+              await page.waitForTimeout(150);
+              if(await page.evaluate(()=>Boolean(window.KUKAC_ACCOUNT?.player)))fail('duplicate nickname accepted');
+
+              await page.fill('#registerNickname','AuditBeta'); await page.fill('#registerPassword','beta-pass-42'); await page.fill('#registerPassword2','beta-pass-42'); await page.click('#registerForm button[type="submit"]');
+              await page.waitForFunction(()=>window.KUKAC_ACCOUNT?.player?.nickname==='AuditBeta');
+              await page.evaluate(()=>window.KUKAC_ACCOUNT.submitRun({score:40,level:1,stars:2,coins:0,bestCombo:1,starsRecovered:0,dragonSurvivals:0,royalStars:0}));
+              await page.click('#closeAccount'); await page.click('#leaderboardBtn',{force:true});
+              const names=(await page.locator('.leader-row strong').allTextContents()).map(x=>x.trim());
+              if(names[0]!=='AuditAlpha'||names[1]!=='AuditBeta')fail('leaderboard order wrong: '+names);
+              await page.locator('.leader-row[data-nickname="AuditAlpha"]').click();
+              if(!(await page.locator('#playerProfileContent').innerText()).includes('120'))fail('clickable player profile wrong');
+
+              await page.evaluate(()=>localStorage.clear()); await page.reload({waitUntil:'networkidle'});
+              if(await page.evaluate(()=>Boolean(window.KUKAC_ACCOUNT?.player)))fail('storage clear did not return to guest');
+              await page.click('#startIdentity'); await page.click('[data-account-mode="recover"]');
+              await page.fill('#recoveryCodeInput',recovery.slice(0,-4)+'XXXX'); await page.click('#recoverForm button[type="submit"]'); await page.waitForTimeout(150);
+              if(await page.evaluate(()=>Boolean(window.KUKAC_ACCOUNT?.player)))fail('tampered recovery accepted');
+              await page.fill('#recoveryCodeInput',recovery); await page.click('#recoverForm button[type="submit"]');
+              await page.waitForFunction(()=>window.KUKAC_ACCOUNT?.player?.nickname==='AuditAlpha');
+              if(!await page.evaluate(()=>window.KUKAC_ACCOUNT.player.highScore===120&&window.KUKAC_ACCOUNT.player.totalGames===1))fail('recovery stats wrong');
+              await page.reload({waitUntil:'networkidle'});
+              if(!await page.evaluate(()=>window.KUKAC_ACCOUNT?.player?.nickname==='AuditAlpha'))fail('recovered profile did not persist');
+              if(errors.length)fail('account audit page errors: '+errors.join(' | '));
+              await context.close();
+            }finally{await browser.close()}
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+      - name: Upload exact-live screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kukac-exact-live
+          path: live-*.png
+          if-no-files-found: ignore
