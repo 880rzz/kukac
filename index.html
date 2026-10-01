@@ -28,6 +28,8 @@ canvas{display:block;width:100%;height:100%}
 .tools{display:flex;padding:7px;gap:5px;pointer-events:auto}
 .langselect{height:42px;border:0;border-radius:14px;background:rgba(255,255,255,.08);color:#fff;padding:0 10px;font:700 12px inherit;outline:none;cursor:pointer}
 .langselect option{color:#111;background:#fff}
+.start-lang{display:flex;justify-content:flex-end;margin:-4px 0 14px}
+.start-lang .langselect{min-width:150px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18)}
 .iconbtn{width:42px;height:42px;border:0;border-radius:14px;background:rgba(255,255,255,.08);color:#fff;font-size:18px;cursor:pointer;transition:.2s}
 .iconbtn:hover{background:rgba(255,255,255,.17);transform:translateY(-1px)}
 #mission{position:fixed;left:50%;top:calc(var(--safe-t) + 84px);transform:translateX(-50%);z-index:11;padding:8px 13px;border-radius:999px;background:rgba(7,18,35,.62);border:1px solid rgba(255,255,255,.13);font-size:12px;letter-spacing:.04em;backdrop-filter:blur(14px);white-space:nowrap;pointer-events:none}
@@ -104,6 +106,15 @@ canvas{display:block;width:100%;height:100%}
 
 <div class="overlay" id="start">
   <div class="card">
+    <div class="start-lang">
+      <select id="startLangSelect" class="langselect" aria-label="Sprache">
+        <option value="de">Deutsch</option>
+        <option value="tr">Türkçe</option>
+        <option value="uk">Українська</option>
+        <option value="hu">Magyar</option>
+        <option value="en">English</option>
+      </select>
+    </div>
     <h1>KUKAC <em>3D</em></h1>
     <p data-i18n="intro">Die klassische Snake-Idee als modernes 3D-Arcade-Spiel. Sammle Sterne und Münzen, weiche Hindernissen aus, baue Combos auf und erreiche immer schnellere Levels.</p>
     <div class="keys">
@@ -227,6 +238,7 @@ function applyLanguage(lang){
   document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=t(el.dataset.i18n));
   document.querySelectorAll('[data-i18n-html]').forEach(el=>el.innerHTML=t(el.dataset.i18nHtml));
   $('langSelect').value=lang;
+  if($('startLangSelect')) $('startLangSelect').value=lang;
   $('soundBtn').setAttribute('aria-label',lang==='de'?'Ton an/aus':lang==='tr'?'Sesi aç/kapat':lang==='uk'?'Увімкнути/вимкнути звук':lang==='hu'?'Hang ki/be':'Sound on/off');
   $('helpBtn').setAttribute('aria-label',lang==='de'?'Hilfe':lang==='tr'?'Yardım':lang==='uk'?'Допомога':lang==='hu'?'Súgó':'Help');
   $('pauseBtn').setAttribute('aria-label',t('pause'));
@@ -234,6 +246,7 @@ function applyLanguage(lang){
 
 $('best').textContent=best;
 $('langSelect').addEventListener('change',e=>applyLanguage(e.target.value));
+$('startLangSelect').addEventListener('change',e=>applyLanguage(e.target.value));
 applyLanguage(currentLang);
 
 function mat(color,rough=.55,metal=.04){
