@@ -374,7 +374,8 @@ function crowdStartFor(kind){
 }
 function spawnNpcRaid(now,forcedKind=null){
   if(!running||paused||dead)return;
-  const pool=level>=4?['hero','soldier','dragon']:level>=2?['hero','soldier']:['hero'];
+  let pool=level>=4?['hero','soldier','dragon']:level>=2?['hero','soldier']:['hero'];
+  if(stolenStar)pool=['soldier'];
   const kind=forcedKind||pool[Math.floor(Math.random()*pool.length)];
   const obj=kind==='dragon'?makeDragon():makeHumanoid(kind,kind==='hero'?0x38a169:0xb11f2b);
   const start=crowdStartFor(kind);
@@ -413,6 +414,19 @@ function updateNPCs(t){
   if(score>=nextRoyalScore)triggerRoyalEvent(t);
   triggerDragonEvent(t);
 
+  // Star-state watchdog: the game must never remain permanently without a collectible.
+  if(!food&&!stolenStar&&running&&!dead)spawnFood();
+  if(stolenStar){
+    const owner=stolenStar.userData.thief;
+    const ownerAlive=owner&&npcs.includes(owner)&&owner.userData.state==='escape';
+    const stolenTooLong=ownerAlive&&owner.userData.stolenAt&&t-owner.userData.stolenAt>9000;
+    if(!ownerAlive||stolenTooLong){
+      if(ownerAlive){npcGroup.remove(owner);npcs=npcs.filter(x=>x!==owner)}
+      scene.remove(stolenStar);stolenStar=null;
+      if(running&&!dead)spawnFood();
+    }
+  }
+
   npcs.slice().forEach(n=>{
     const d=n.userData;if(paused||dead)return;
     if(d.wings){d.wings[0].rotation.y=Math.sin(t*.012)*.7;d.wings[1].rotation.y=-Math.sin(t*.012)*.7}
@@ -428,7 +442,7 @@ function updateNPCs(t){
     if(d.role==='thief'&&d.state==='in'&&food){
       const dx=n.position.x-food.position.x,dz=n.position.z-food.position.z;
       if(Math.hypot(dx,dz)<1.0){
-        d.state='escape';d.steal=true;stolenStar=food;food=null;
+        d.state='escape';d.steal=true;d.stolenAt=t;stolenStar=food;food=null;
         stolenStar.userData.thief=n;showCombo(t('stolen'));sound('steal');showEvent(t('stolen'),1700);
       }
     }
@@ -438,11 +452,11 @@ function updateNPCs(t){
         score+=20;addParticleBurst(stolenStar.position.clone(),0xffe866,34);scene.remove(stolenStar);stolenStar=null;
         showCombo(t('starSaved'));sound('coin');npcGroup.remove(n);npcs=npcs.filter(x=>x!==n);spawnFood();updateHUD();return;
       }
-      if(n.position.distanceTo(d.start)<.45){
+      if(Math.hypot(n.position.x-d.start.x,n.position.z-d.start.z)<.45){
         score=Math.max(0,score-5);scene.remove(stolenStar);stolenStar=null;showCombo(t('stolen'));updateHUD();
         npcGroup.remove(n);npcs=npcs.filter(x=>x!==n);setTimeout(()=>{if(!food&&!dead)spawnFood()},350);return;
       }
-    } else if(d.state==='escape'&&n.position.distanceTo(d.start)<.45){
+    } else if(d.state==='escape'&&Math.hypot(n.position.x-d.start.x,n.position.z-d.start.z)<.45){
       npcGroup.remove(n);npcs=npcs.filter(x=>x!==n);return;
     }
 
