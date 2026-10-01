@@ -27,6 +27,8 @@
       </select>
       <button class="iconbtn" id="soundBtn" aria-label="Ton an/aus">🔊</button>
       <button class="iconbtn" id="controlsToggle" aria-label="Steuerung">🎮</button>
+      <button class="iconbtn" id="leaderboardBtn" aria-label="Leaderboard">🏆</button>
+      <button class="iconbtn" id="accountBtn" aria-label="Arcade ID">👤</button>
       <button class="iconbtn hide-mobile" id="helpBtn" aria-label="Súgó">?</button>
       <button class="iconbtn" id="pauseBtn" aria-label="Szünet">Ⅱ</button>
     </div>
@@ -65,6 +67,7 @@
       <span data-i18n="ruleStar">⭐ STERN HOLEN</span>
       <span data-i18n="ruleSurvive">⚠ NICHT CRASHEN</span>
     </div>
+    <button class="identity-chip" id="startIdentity" type="button"><span id="arcadeIdentity" data-i18n="guestLabel">Gast</span></button>
     <button class="primary" id="startBtn" data-i18n="startBtn">SPIEL STARTEN</button>
     <button class="secondary" id="showHelp" data-i18n="helpBtnText">Vollständige Anleitung</button>
   </div>
@@ -92,11 +95,83 @@
   </div>
 </div>
 
+
+<div class="overlay" id="account" style="display:none">
+  <div class="card account-card">
+    <div class="modal-head">
+      <div><small>KUKAC ARCADE ID</small><h2 data-i18n="accountTitle">Arcade ID</h2></div>
+      <button class="iconbtn" id="closeAccount" aria-label="Close">×</button>
+    </div>
+    <div class="account-tabs">
+      <button data-account-mode="login" class="active" data-i18n="loginTab">Login</button>
+      <button data-account-mode="register" data-i18n="registerTab">Register</button>
+      <button data-account-mode="recover" data-i18n="recoverTab">Recover</button>
+      <button data-account-mode="profile" data-i18n="profileTab">Profile</button>
+    </div>
+    <div id="accountMessage" class="account-message"></div>
+
+    <form id="loginForm" data-account-pane="login" class="account-pane">
+      <label><span data-i18n="nicknameLabel">Nickname</span><input id="loginNickname" autocomplete="username" maxlength="20" required></label>
+      <label><span data-i18n="passwordLabel">Password</span><input id="loginPassword" type="password" autocomplete="current-password" minlength="8" maxlength="128" required></label>
+      <button class="primary" type="submit" data-i18n="loginButton">Login</button>
+    </form>
+
+    <form id="registerForm" data-account-pane="register" class="account-pane" hidden>
+      <label><span data-i18n="nicknameLabel">Nickname</span><input id="registerNickname" autocomplete="username" maxlength="20" required></label>
+      <label><span data-i18n="passwordLabel">Password</span><input id="registerPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" required></label>
+      <label><span data-i18n="passwordAgainLabel">Password again</span><input id="registerPassword2" type="password" autocomplete="new-password" minlength="8" maxlength="128" required></label>
+      <p class="microcopy" data-i18n="passwordHelp">Minimum 8 characters. The password is stored only as a salted one-way hash.</p>
+      <button class="primary" type="submit" data-i18n="registerButton">Create Arcade ID</button>
+      <div id="recoveryReveal" class="recovery-box" hidden>
+        <small data-i18n="saveRecovery">Save this recovery code. It is shown only once.</small>
+        <code id="recoveryCodeValue"></code>
+      </div>
+    </form>
+
+    <form id="recoverForm" data-account-pane="recover" class="account-pane" hidden>
+      <p data-i18n="recoverHelp">If cookies are deleted and you forgot your nickname, enter the recovery code you saved at registration.</p>
+      <label><span data-i18n="recoveryCodeLabel">Recovery code</span><input id="recoveryCodeInput" autocomplete="off" placeholder="KUKAC-XXXX-XXXX-XXXX" required></label>
+      <button class="primary" type="submit" data-i18n="recoverButton">Recover nickname</button>
+      <div id="recoveredNicknameBox" class="recovery-box" hidden>
+        <small data-i18n="yourNickname">Your nickname</small>
+        <code id="recoveredNickname"></code>
+      </div>
+    </form>
+
+    <div data-account-pane="profile" class="account-pane" hidden>
+      <div id="myProfileSummary"></div>
+      <button id="logoutBtn" class="secondary" type="button" data-i18n="logoutButton">Logout</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="leaderboard" style="display:none">
+  <div class="card leaderboard-card">
+    <div class="modal-head">
+      <div><small>KUKAC ARCADE</small><h2 data-i18n="leaderboardTitle">Global Leaderboard</h2></div>
+      <button class="iconbtn" id="closeLeaderboard" aria-label="Close">×</button>
+    </div>
+    <div class="leader-head"><span>#</span><span data-i18n="nicknameLabel">Nickname</span><span data-i18n="scoreLabel">Score</span><span>LVL</span></div>
+    <div id="leaderboardBody"></div>
+  </div>
+</div>
+
+<div class="overlay" id="playerProfile" style="display:none">
+  <div class="card profile-card">
+    <div class="modal-head">
+      <div><small>KUKAC ARCADE</small><h2 data-i18n="playerStatsTitle">Player stats</h2></div>
+      <button class="iconbtn" id="closePlayerProfile" aria-label="Close">×</button>
+    </div>
+    <div id="playerProfileContent"></div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="i18n.js"></script>
 <script src="world.js"></script>
 <script src="actors.js"></script>
 <script src="audio.js"></script>
+<script src="account.js"></script>
 <script src="game.js"></script>
 </body>
 </html>
