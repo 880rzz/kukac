@@ -205,7 +205,7 @@ function spawnNpcRaid(now,forcedKind=null){
   obj.position.copy(start);obj.lookAt(target.x,obj.position.y,target.z);
   obj.scale.multiplyScalar(kind==='dragon'?1.25:1.2);
   const role=kind==='soldier'?'blocker':'thief';
-  obj.userData={...obj.userData,kind,role,state:'in',start:start.clone(),target:target.clone(),born:now,speed:kind==='dragon'?.07:kind==='hero'?.095:.07,steal:false};
+  obj.userData={...obj.userData,kind,role,state:'in',start:start.clone(),target:target.clone(),born:now,speed:kind==='dragon'? .07:kind==='hero'? .095:.07,steal:false};
   npcGroup.add(obj);npcs.push(obj);
   showCombo(kind==='dragon'?t('raidDragon'):t('raidInvader'));sound('raid');
 }
@@ -222,12 +222,12 @@ function triggerDragonEvent(t){
   gameState.progression.dragonTriggered=true;showEvent(t('eventDragon'),3200);sound('raid');setCrowdMood('danger',3500);haptic([80,50,80]);
   const ring=new THREE.Mesh(new THREE.RingGeometry(.8,1.08,32),new THREE.MeshBasicMaterial({color:0xff4b35,transparent:true,opacity:.72,side:THREE.DoubleSide}));
   ring.rotation.x=-Math.PI/2;const target=food?food.position:snake[0].position;ring.position.set(target.x,.08,target.z);scene.add(ring);
-  let pulse=0;const warn=setInterval(()=>{pulse++;ring.scale.setScalar(1+(pulse%2)*.35);ring.material.opacity=pulse%2?.35:.72},140);
+  let pulse=0;const warn=setInterval(()=>{pulse++;ring.scale.setScalar(1+(pulse%2)*.35);ring.material.opacity=pulse%2? .35:.72},140);
   setTimeout(()=>{clearInterval(warn);scene.remove(ring);if(gameState.session.isRunning&&!gameState.session.isDead)spawnNpcRaid(performance.now(),'dragon')},1100);
 }
 function updateNPCs(t){
   if(t>gameState.world.crowdMoodUntil)gameState.world.crowdMood='calm';
-  const moodAmp=gameState.world.crowdMood==='celebrate'?1.35:gameState.world.crowdMood==='danger'?1.05:gameState.world.crowdMood==='tense'?.8:.55;
+  const moodAmp=gameState.world.crowdMood==='celebrate'?1.35:gameState.world.crowdMood==='danger'?1.05:gameState.world.crowdMood==='tense'? .8:.55;
   crowd.forEach((f,i)=>{
     const a=f.userData.arms;
     if(a){a[0].rotation.z=Math.sin(t*.007+(f.userData.phase||i))*moodAmp;a[1].rotation.z=-Math.sin(t*.007+(f.userData.phase||i))*moodAmp}
@@ -294,7 +294,7 @@ function updateNPCs(t){
 
 function sphereSegment(isHead=false){
   const g=new THREE.Group();
-  const core=new THREE.Mesh(new THREE.SphereGeometry(isHead?.55:.47,20,16),isHead?headMat:(snake.length%2?bodyMat:bodyAlt));
+  const core=new THREE.Mesh(new THREE.SphereGeometry(isHead? .55:.47,20,16),isHead?headMat:(snake.length%2?bodyMat:bodyAlt));
   core.castShadow=true;core.receiveShadow=true;g.add(core);
   if(isHead){
     [-.20,.20].forEach(x=>{
@@ -347,7 +347,7 @@ function randomCell(){
 function makeStar(){
   const shape=new THREE.Shape();
   for(let i=0;i<10;i++){
-    const a=-Math.PI/2+i*Math.PI/5,r=i%2===0?.58:.26;
+    const a=-Math.PI/2+i*Math.PI/5,r=i%2===0? .58:.26;
     const x=Math.cos(a)*r,y=Math.sin(a)*r;
     i?shape.lineTo(x,y):shape.moveTo(x,y);
   }
@@ -405,9 +405,9 @@ function startAudioLayers(){
 function updateAudioLayers(){
   if(!gameState.audio.ambience)return;
   const now=audioCtx.currentTime;
-  const tension=Math.max(0,(3-gameState.player.lifeCount))*.002+(gameState.progression.royalOn?.003:0)+(gameState.progression.stolenCollectible?.004:0);
+  const tension=Math.max(0,(3-gameState.player.lifeCount))*.002+(gameState.progression.royalOn? .003:0)+(gameState.progression.stolenCollectible? .004:0);
   gameState.audio.tension.gain.gain.setTargetAtTime(tension,now,.18);
-  gameState.audio.ambience.gain.gain.setTargetAtTime(gameState.session.soundEnabled?.006:0,now,.18);
+  gameState.audio.ambience.gain.gain.setTargetAtTime(gameState.session.soundEnabled? .006:0,now,.18);
 }
 function sound(type){
   if(!gameState.session.soundEnabled)return;
@@ -421,7 +421,7 @@ function sound(type){
     raid:[180,420,.22,'square'],steal:[700,120,.28,'sawtooth']
   };
   const s=sets[type]||sets.eat;osc.type=s[3];osc.frequency.setValueAtTime(s[0],now);osc.frequency.exponentialRampToValueAtTime(Math.max(40,s[1]),now+s[2]);
-  gain.gain.setValueAtTime(type==='turn'?.015:.11,now);gain.gain.exponentialRampToValueAtTime(.001,now+s[2]);
+  gain.gain.setValueAtTime(type==='turn'? .015:.11,now);gain.gain.exponentialRampToValueAtTime(.001,now+s[2]);
   osc.start(now);osc.stop(now+s[2]);
 }
 function flash(){const e=$('flash');e.classList.remove('go');void e.offsetWidth;e.classList.add('go')}
