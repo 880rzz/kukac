@@ -18,6 +18,9 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.expected_sha || github.event.workflow_run.head_sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -31,6 +34,7 @@ jobs:
         run: |
           node <<'NODE'
           const { chromium } = require('playwright');
+          const fs = require('node:fs');
           const URL='https://kukac.vipach.at/';
           const viewports=[
             {name:'desktop',width:1440,height:900},
@@ -48,8 +52,17 @@ jobs:
                 page.on('pageerror',e=>errors.push(String(e)));
                 page.on('console',m=>{if(m.type()==='error')errors.push('console:'+m.text())});
                 page.on('requestfailed',r=>failed.push(r.url()+':'+(r.failure()?.errorText||'failed')));
-                await page.addInitScript(()=>addEventListener('unhandledrejection',e=>{window.__auditRejects=(window.__auditRejects||[]).concat(String(e.reason))}));
+                await page.addInitScript(()=>addEventListener('unhandledrejection',e=>console.error('unhandledrejection:'+String(e.reason))));
                 const response=await page.goto(URL+'?audit='+Date.now(),{waitUntil:'networkidle',timeout:60000});
+                if(vp.name==='desktop'){
+                  for(const asset of ['index.html','game.js','account.js','i18n.js','styles.css']){
+                    const live=await context.request.get(URL+asset+'?sha='+encodeURIComponent(process.env.EXPECTED_SHA||''));
+                    if(live.status()!==200)fail('exact-live asset HTTP '+asset+': '+live.status());
+                    const liveText=await live.text();
+                    const expected=fs.readFileSync(asset,'utf8');
+                    if(liveText!==expected)fail('exact-live asset mismatch: '+asset);
+                  }
+                }
                 if(!response||response.status()!==200)fail(vp.name+': production HTTP '+(response?.status()));
                 const server=response.headers()['server']||'';
                 if(!/github/i.test(server))fail(vp.name+': production is not identified as GitHub Pages; server='+server);
@@ -83,9 +96,7 @@ jobs:
                   const pad=page.locator('#dpad button').first();
                   if(await pad.count())await pad.tap();
                 }
-                const unhandled=await page.evaluate(()=>window.__auditRejects||[]);
                 if(errors.length)fail(vp.name+': JS errors: '+errors.join(' | '));
-                if(unhandled.length)fail(vp.name+': unhandled rejections: '+unhandled.join(' | '));
                 if(failed.filter(x=>!x.includes('favicon')).length)fail(vp.name+': failed requests: '+failed.join(' | '));
                 await page.screenshot({path:'live-'+vp.name+'.png',fullPage:true});
                 await context.close();
