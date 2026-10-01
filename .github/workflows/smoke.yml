@@ -1,0 +1,30 @@
+name: KUKAC 3D Smoke Check
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate HTML and JavaScript
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const html=fs.readFileSync('index.html','utf8');
+          if(!html.includes('<html lang="de">')) throw new Error('German default language missing');
+          const required=['langSelect','startLangSelect','startBtn','score','level','best','eventPill'];
+          for(const id of required){if(!html.includes('id="'+id+'"')) throw new Error('Missing #'+id)}
+          const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).filter(Boolean);
+          if(!scripts.length) throw new Error('No inline game script found');
+          scripts.forEach((s,i)=>{try{new Function(s)}catch(e){throw new Error('Script '+i+' syntax error: '+e.message)}});
+          const requiredTokens=['triggerRoyalEvent','triggerDragonEvent','starSaved','visibilitychange','prefers-reduced-motion'];
+          for(const token of requiredTokens){if(!html.includes(token)) throw new Error('Missing gameplay/QA token: '+token)}
+          console.log('KUKAC 3D smoke check passed');
+          NODE
