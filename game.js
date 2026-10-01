@@ -622,7 +622,7 @@ window.addEventListener('resize',()=>{
 });
 if(qaMode){
   window.__KUKAC_QA__={
-    snapshot:()=>({lives:gameState.player.lifeCount,shield:gameState.player.shieldCharges,score,level,food:!!food,stolen:!!gameState.progression.stolenCollectible,gameState.session.isDead}),
+    snapshot:()=>({lives:gameState.player.lifeCount,shield:gameState.player.shieldCharges,score,level,food:!!food,stolen:!!gameState.progression.stolenCollectible,dead:gameState.session.isDead}),
     collide:()=>{gameState.player.invulnerableUntilMs=0;handleCollision();return window.__KUKAC_QA__.snapshot()},
     setScore:v=>{score=v;updateHUD();return score},
     setLevel:v=>{level=v;return level},
