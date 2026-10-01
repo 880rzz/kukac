@@ -320,7 +320,7 @@ function makeHumanoid(kind='fan',shirt=0x3a83e8){
   addPart(g,new THREE.BoxGeometry(.14,.55,.14),0x26354a,[.14,.48,0]);
   const la=addPart(g,new THREE.BoxGeometry(.12,.52,.12),skin,[-.31,1.02,0]);
   const ra=addPart(g,new THREE.BoxGeometry(.12,.52,.12),skin,[.31,1.02,0]);
-  g.userData.arms=[la,ra];
+  g.userData.arms=[la,ra];g.userData.kind=kind;
 
   if(kind==='queen'){
     addPart(g,new THREE.ConeGeometry(.42,.62,14),0xe95cae,[0,.88,0]);
@@ -369,7 +369,7 @@ function buildCrowd(){
   const dragon=makeDragon();dragon.position.set(8.5,4.6,-14);dragon.userData.phase=1.7;crowdGroup.add(dragon);crowd.push(dragon);
 }
 function crowdStartFor(kind){
-  const source=kind==='dragon'?crowd.find(x=>x.userData.wings):kind==='soldier'?crowd.find(x=>x.position.z<-12&&x.userData.arms):crowd[Math.floor(Math.random()*Math.max(1,crowd.length-5))];
+  const source=kind==='dragon'?crowd.find(x=>x.userData.kind==='dragon'||x.userData.wings):kind==='soldier'?crowd.find(x=>x.userData.kind==='soldier'):crowd.filter(x=>x.userData.kind==='fan')[Math.floor(Math.random()*Math.max(1,crowd.filter(x=>x.userData.kind==='fan').length))];
   return source?source.position.clone():new THREE.Vector3(0,.1,-11.5);
 }
 function spawnNpcRaid(now,forcedKind=null){
@@ -390,7 +390,7 @@ function spawnNpcRaid(now,forcedKind=null){
 function triggerRoyalEvent(t){
   if(royalActive||dead)return;
   royalActive=true;royalUntil=t+10000;nextRoyalScore+=160;showEvent(t('eventRoyal'),3200);sound('level');
-  const queen=crowd.find(x=>x.position.z<-13);if(queen)queen.scale.setScalar(1.22);
+  const queen=crowd.find(x=>x.userData.kind==='queen');if(queen)queen.scale.setScalar(1.22);
   setTimeout(()=>{if(running&&!dead)spawnNpcRaid(performance.now(),'soldier')},650);
   setTimeout(()=>{if(running&&!dead)spawnNpcRaid(performance.now(),'soldier')},1200);
 }
@@ -406,7 +406,7 @@ function updateNPCs(t){
     f.position.y=Math.abs(Math.sin(t*.004+(f.userData.phase||i)))*.08;
     if(f.userData.wings){f.userData.wings[0].rotation.y=Math.sin(t*.005)*.5;f.userData.wings[1].rotation.y=-Math.sin(t*.005)*.5;f.position.x=8.5+Math.sin(t*.0006)*4}
   });
-  if(royalActive&&t>royalUntil){royalActive=false;const queen=crowd.find(x=>x.position.z<-13);if(queen)queen.scale.setScalar(1.05)}
+  if(royalActive&&t>royalUntil){royalActive=false;const queen=crowd.find(x=>x.userData.kind==='queen');if(queen)queen.scale.setScalar(1.05)}
   if(invasionUnlocked&&running&&!paused&&!dead&&t>nextNpcRaid){
     spawnNpcRaid(t);nextNpcRaid=t+Math.max(5000,9000-level*450)+Math.random()*2400;
   }
