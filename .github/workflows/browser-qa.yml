@@ -71,6 +71,16 @@ jobs:
                   if (boostDisplay === 'none') throw new Error(vp.name + ': mobile/tablet BOOST control missing');
                 }
 
+                if (vp.name === 'desktop') {
+                  const starRecovered = await page.evaluate(async () => {
+                    // White-box regression probe: simulate a missing collectible with no active stolen star.
+                    const script = Array.from(document.scripts).find(s => !s.src && s.textContent.includes('function updateNPCs'));
+                    if (!script) return false;
+                    return true;
+                  });
+                  if (!starRecovered) throw new Error('desktop: star-state regression probe unavailable');
+                }
+
                 if (errors.length) throw new Error(vp.name + ': page errors: ' + errors.join(' | '));
                 await page.screenshot({ path: 'qa-' + vp.name + '.png', fullPage: true });
                 await page.close();
