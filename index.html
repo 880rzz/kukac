@@ -63,6 +63,11 @@ canvas{display:block;width:100%;height:100%}
 .pad.up{left:60px;top:0}.pad.left{left:0;top:60px}.pad.right{right:0;top:60px}.pad.down{left:60px;bottom:0}
 #boost{position:fixed;right:22px;bottom:calc(var(--safe-b) + 34px);z-index:15;display:none;pointer-events:auto;width:82px;height:82px;border:1px solid rgba(255,255,255,.2);border-radius:50%;background:radial-gradient(circle at 35% 25%,#ffe45f,#ff8a00);color:#392100;font-weight:1000;box-shadow:0 10px 35px rgba(255,139,0,.35)}
 #boost:active{transform:scale(.93)}
+.start-rules{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}
+.start-rules span{flex:1 1 120px;text-align:center;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.07);font-size:12px;font-weight:800;letter-spacing:.02em}
+.eventpill{position:fixed;left:50%;bottom:calc(var(--safe-b) + 18px);transform:translateX(-50%);z-index:14;padding:9px 14px;border-radius:999px;background:rgba(7,18,35,.78);border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(14px);font-size:12px;font-weight:900;letter-spacing:.05em;opacity:0;transition:.25s;pointer-events:none}
+.eventpill.show{opacity:1}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
 @media (hover:none),(max-width:820px){#controls,#boost{display:block}.brand span{display:none}.tools .hide-mobile{display:none}.stats{position:absolute;top:62px;left:50%;transform:translateX(-50%)}#mission{top:118px}.brand{padding:10px 13px}.topbar{align-items:flex-start}.card{border-radius:26px}.keys{grid-template-columns:1fr}.langselect{max-width:92px;padding:0 6px;font-size:11px}}
 @media (min-width:521px) and (max-width:1024px){#controls,#boost{display:block}.card{width:min(650px,92vw)}.stats{transform:scale(.95);transform-origin:top center}.langselect{max-width:110px}}
 @media (max-width:520px){.stat{padding:6px 8px}.stat small{font-size:8px}.stats{gap:3px}.iconbtn{width:40px;height:40px}.brand strong{font-size:14px}}
@@ -93,6 +98,7 @@ canvas{display:block;width:100%;height:100%}
 </div>
 <div id="mission"><span data-i18n="nextLevel">Nächstes Level:</span> <b id="nextLevel">80</b> <span data-i18n="pointsWord">Punkte</span></div>
 <div id="combo"></div>
+<div id="eventPill" class="eventpill"></div>
 <div id="flash"></div>
 <div id="levelBanner"><div><span data-i18n="levelBanner">LEVEL</span><b id="levelBig">1</b></div></div>
 
@@ -117,11 +123,10 @@ canvas{display:block;width:100%;height:100%}
     </div>
     <h1>KUKAC <em>3D</em></h1>
     <p data-i18n="intro">Die klassische Snake-Idee als modernes 3D-Arcade-Spiel. Sammle Sterne und Münzen, weiche Hindernissen aus, baue Combos auf und erreiche immer schnellere Levels.</p>
-    <div class="keys">
-      <div class="tip"><b data-i18n="keyboardTitle">⌨️ Tastatur</b><span data-i18n="keyboardText">Pfeile oder WASD · Leertaste = Pause · Shift = Boost</span></div>
-      <div class="tip"><b data-i18n="mobileTitle">📱 Mobil</b><span data-i18n="mobileText">Richtungstasten oder Wischen · BOOST = Beschleunigen</span></div>
-      <div class="tip"><b data-i18n="starTitle">⭐ Stern</b><span data-i18n="starText">+10 Punkte, der Wurm wird länger und die Combo steigt.</span></div>
-      <div class="tip"><b data-i18n="coinTitle">🪙 Goldmünze</b><span data-i18n="coinText">Seltener Bonus: +25 Punkte, ohne Wachstum.</span></div>
+    <div class="start-rules">
+      <span data-i18n="ruleMove">↔ BEWEGEN</span>
+      <span data-i18n="ruleStar">⭐ STERN HOLEN</span>
+      <span data-i18n="ruleSurvive">⚠ NICHT CRASHEN</span>
     </div>
     <button class="primary" id="startBtn" data-i18n="startBtn">SPIEL STARTEN</button>
     <button class="secondary" id="showHelp" data-i18n="helpBtnText">Vollständige Anleitung</button>
@@ -154,6 +159,7 @@ canvas{display:block;width:100%;height:100%}
 <script>
 (() => {
 'use strict';
+if(!window.THREE){document.body.innerHTML='<div style="padding:40px;color:white;font-family:system-ui">3D engine could not be loaded. Please check your connection and reload.</div>';return}
 const GRID=20, HALF=GRID/2, LEVEL_STEP=80;
 const scene=new THREE.Scene();
 scene.fog=new THREE.Fog(0x80c8ff,20,58);
@@ -182,13 +188,14 @@ let snake=[], food=null, coin=null, obstacles=[], direction={x:1,z:0}, nextDirec
 let score=0, level=1, best=Number(localStorage.getItem('kukac3d-best')||0);
 let running=false, paused=false, soundOn=true, dead=false, combo=0, comboTimer=0, lastMove=0;
 let baseInterval=155, boosting=false, shake=0, audioCtx=null;
-let npcs=[], crowd=[], nextNpcRaid=0;
+let npcs=[], crowd=[], nextNpcRaid=Infinity;
+let starsCollected=0, invasionUnlocked=false, stolenStar=null, royalActive=false, royalUntil=0, nextRoyalScore=160, dragonEventDone=false;
 
 const $=id=>document.getElementById(id);
 
 const I18N={
 de:{
-scoreLabel:'Punkte',levelLabel:'Level',bestLabel:'Rekord',levelBanner:'LEVEL',nextLevel:'Nächstes Level:',pointsWord:'Punkte',
+scoreLabel:'Punkte',levelLabel:'Level',bestLabel:'Rekord',levelBanner:'LEVEL',nextLevel:'Nächstes Level:',pointsWord:'Punkte',ruleMove:'↔ BEWEGEN',ruleStar:'⭐ STERN HOLEN',ruleSurvive:'⚠ NICHT CRASHEN',eventRoyal:'KÖNIGLICHES EVENT',eventDragon:'DRACHENANGRIFF',starSaved:'STERN GERETTET +20',boostBonus:'BOOST-BONUS',
 intro:'Die klassische Snake-Idee als modernes 3D-Arcade-Spiel. Sammle Sterne und Münzen, weiche Hindernissen aus, baue Combos auf und erreiche immer schnellere Levels.',
 keyboardTitle:'⌨️ Tastatur',keyboardText:'Pfeile oder WASD · Leertaste = Pause · Shift = Boost',mobileTitle:'📱 Mobil',mobileText:'Richtungstasten oder Wischen · BOOST = Beschleunigen',starTitle:'⭐ Stern',starText:'+10 Punkte, der Wurm wird länger und die Combo steigt.',coinTitle:'🪙 Goldmünze',coinText:'Seltener Bonus: +25 Punkte, ohne Wachstum.',
 startBtn:'SPIEL STARTEN',helpBtnText:'Vollständige Anleitung',helpTitle:'Wie <em>spielst du?</em>',
@@ -196,7 +203,7 @@ helpGoal:'<b>Ziel:</b> Sammle so viele Punkte wie möglich, ohne gegen Wände, H
 raidDragon:'DRACHE!',raidInvader:'EINDRINGLING!',stolen:'GESTOHLEN! -5',collision:'TREFFER!',pause:'PAUSE',go:'LOS',result:(s,l,b)=>`Punkte: <b>${s}</b> · Level: <b>${l}</b> · Rekord: <b>${b}</b>`
 },
 tr:{
-scoreLabel:'Puan',levelLabel:'Seviye',bestLabel:'Rekor',levelBanner:'SEVİYE',nextLevel:'Sonraki seviye:',pointsWord:'puan',
+scoreLabel:'Puan',levelLabel:'Seviye',bestLabel:'Rekor',levelBanner:'SEVİYE',nextLevel:'Sonraki seviye:',pointsWord:'puan',ruleMove:'↔ HAREKET',ruleStar:'⭐ YILDIZI AL',ruleSurvive:'⚠ ÇARPMA',eventRoyal:'KRALİYET ETKİNLİĞİ',eventDragon:'EJDERHA SALDIRISI',starSaved:'YILDIZ KURTARILDI +20',boostBonus:'BOOST BONUSU',
 intro:'Klasik Snake fikrinin modern 3D arcade yorumu. Yıldız ve para topla, engellerden kaç, kombo yap ve giderek hızlanan seviyelere ulaş.',
 keyboardTitle:'⌨️ Klavye',keyboardText:'Ok tuşları veya WASD · Boşluk = Duraklat · Shift = Hızlan',mobileTitle:'📱 Mobil',mobileText:'Yön tuşları veya kaydırma · BOOST = Hızlan',starTitle:'⭐ Yıldız',starText:'+10 puan, solucan uzar ve kombo artar.',coinTitle:'🪙 Altın para',coinText:'Nadir bonus: +25 puan, uzatma yok.',
 startBtn:'OYUNU BAŞLAT',helpBtnText:'Tam kullanım kılavuzu',helpTitle:'Nasıl <em>oynanır?</em>',
@@ -204,7 +211,7 @@ helpGoal:'<b>Amaç:</b> Duvara, engele veya kendi gövdende çarpmadan olabildi�
 raidDragon:'EJDERHA!',raidInvader:'DAVETSİZ!',stolen:'ÇALINDI! -5',collision:'ÇARPIŞMA!',pause:'DURAKLAT',go:'DEVAM',result:(s,l,b)=>`Puan: <b>${s}</b> · Seviye: <b>${l}</b> · Rekor: <b>${b}</b>`
 },
 uk:{
-scoreLabel:'Очки',levelLabel:'Рівень',bestLabel:'Рекорд',levelBanner:'РІВЕНЬ',nextLevel:'Наступний рівень:',pointsWord:'очок',
+scoreLabel:'Очки',levelLabel:'Рівень',bestLabel:'Рекорд',levelBanner:'РІВЕНЬ',nextLevel:'Наступний рівень:',pointsWord:'очок',ruleMove:'↔ РУХАЙСЯ',ruleStar:'⭐ ВІЗЬМИ ЗІРКУ',ruleSurvive:'⚠ НЕ ВРІЖСЯ',eventRoyal:'КОРОЛІВСЬКА ПОДІЯ',eventDragon:'АТАКА ДРАКОНА',starSaved:'ЗІРКУ ВРЯТОВАНО +20',boostBonus:'BOOST-БОНУС',
 intro:'Сучасна 3D-аркадна версія класичної Snake. Збирай зірки й монети, оминай перешкоди, будуй комбо та переходь на дедалі швидші рівні.',
 keyboardTitle:'⌨️ Клавіатура',keyboardText:'Стрілки або WASD · Пробіл = пауза · Shift = прискорення',mobileTitle:'📱 Мобільний',mobileText:'Кнопки напрямку або свайп · BOOST = прискорення',starTitle:'⭐ Зірка',starText:'+10 очок, черв’як стає довшим, а комбо зростає.',coinTitle:'🪙 Золота монета',coinText:'Рідкісний бонус: +25 очок без збільшення довжини.',
 startBtn:'ПОЧАТИ ГРУ',helpBtnText:'Повна інструкція',helpTitle:'Як <em>грати?</em>',
@@ -212,7 +219,7 @@ helpGoal:'<b>Мета:</b> Набери якомога більше очок, н
 raidDragon:'ДРАКОН!',raidInvader:'ПОРУШНИК!',stolen:'ВКРАЛИ! -5',collision:'ЗІТКНЕННЯ!',pause:'ПАУЗА',go:'СТАРТ',result:(s,l,b)=>`Очки: <b>${s}</b> · Рівень: <b>${l}</b> · Рекорд: <b>${b}</b>`
 },
 hu:{
-scoreLabel:'Pont',levelLabel:'Szint',bestLabel:'Rekord',levelBanner:'SZINT',nextLevel:'Következő szint:',pointsWord:'pont',
+scoreLabel:'Pont',levelLabel:'Szint',bestLabel:'Rekord',levelBanner:'SZINT',nextLevel:'Következő szint:',pointsWord:'pont',ruleMove:'↔ MOZOGJ',ruleStar:'⭐ SZEREZD MEG',ruleSurvive:'⚠ NE ÜTKÖZZ',eventRoyal:'KIRÁLYI ESEMÉNY',eventDragon:'SÁRKÁNYTÁMADÁS',starSaved:'CSILLAG MEGMENTVE +20',boostBonus:'BOOST BÓNUSZ',
 intro:'A klasszikus Snake modern, látványos 3D arcade újragondolása. Gyűjts csillagokat és érméket, kerüld az akadályokat, építs kombót és juss egyre gyorsabb szintekre.',
 keyboardTitle:'⌨️ Billentyűzet',keyboardText:'Nyilak vagy WASD · Space = szünet · Shift = boost',mobileTitle:'📱 Mobil',mobileText:'Iránygombok vagy húzás · BOOST = gyorsítás',starTitle:'⭐ Csillag',starText:'+10 pont, hosszabb leszel és nő a kombó.',coinTitle:'🪙 Arany érme',coinText:'Ritka bónusz: +25 pont, nem növeszt.',
 startBtn:'JÁTÉK INDÍTÁSA',helpBtnText:'Teljes használati útmutató',helpTitle:'Hogyan <em>játssz?</em>',
@@ -220,7 +227,7 @@ helpGoal:'<b>Cél:</b> Gyűjts minél több pontot anélkül, hogy falnak, akad�
 raidDragon:'SÁRKÁNY!',raidInvader:'BETOLAKODÓ!',stolen:'ELLOPTÁK! -5',collision:'ÜTKÖZÉS!',pause:'SZÜNET',go:'RAJT',result:(s,l,b)=>`Pontszám: <b>${s}</b> · Szint: <b>${l}</b> · Rekord: <b>${b}</b>`
 },
 en:{
-scoreLabel:'Score',levelLabel:'Level',bestLabel:'Best',levelBanner:'LEVEL',nextLevel:'Next level:',pointsWord:'points',
+scoreLabel:'Score',levelLabel:'Level',bestLabel:'Best',levelBanner:'LEVEL',nextLevel:'Next level:',pointsWord:'points',ruleMove:'↔ MOVE',ruleStar:'⭐ GET THE STAR',ruleSurvive:'⚠ DON’T CRASH',eventRoyal:'ROYAL EVENT',eventDragon:'DRAGON ATTACK',starSaved:'STAR SAVED +20',boostBonus:'BOOST BONUS',
 intro:'A modern 3D arcade take on classic Snake. Collect stars and coins, dodge obstacles, build combos and reach increasingly faster levels.',
 keyboardTitle:'⌨️ Keyboard',keyboardText:'Arrow keys or WASD · Space = pause · Shift = boost',mobileTitle:'📱 Mobile',mobileText:'Direction buttons or swipe · BOOST = speed up',starTitle:'⭐ Star',starText:'+10 points, you grow longer and your combo increases.',coinTitle:'🪙 Gold coin',coinText:'Rare bonus: +25 points without growing.',
 startBtn:'START GAME',helpBtnText:'Full instructions',helpTitle:'How to <em>play?</em>',
@@ -361,57 +368,86 @@ function buildCrowd(){
   }
   const dragon=makeDragon();dragon.position.set(8.5,4.6,-14);dragon.userData.phase=1.7;crowdGroup.add(dragon);crowd.push(dragon);
 }
-function spawnNpcRaid(now){
-  if(!running||paused||dead||!food)return;
-  const kinds=level>=3?['hero','soldier','dragon']:['hero','soldier'];
-  const kind=kinds[Math.floor(Math.random()*kinds.length)];
+function crowdStartFor(kind){
+  const source=kind==='dragon'?crowd.find(x=>x.userData.wings):kind==='soldier'?crowd.find(x=>x.position.z<-12&&x.userData.arms):crowd[Math.floor(Math.random()*Math.max(1,crowd.length-5))];
+  return source?source.position.clone():new THREE.Vector3(0,.1,-11.5);
+}
+function spawnNpcRaid(now,forcedKind=null){
+  if(!running||paused||dead)return;
+  const pool=level>=4?['hero','soldier','dragon']:level>=2?['hero','soldier']:['hero'];
+  const kind=forcedKind||pool[Math.floor(Math.random()*pool.length)];
   const obj=kind==='dragon'?makeDragon():makeHumanoid(kind,kind==='hero'?0x38a169:0xb11f2b);
-  const edge=Math.floor(Math.random()*4),start=new THREE.Vector3(),target=food.position.clone();
-  if(edge===0)start.set(-11.5,.1,-8+Math.random()*16);
-  if(edge===1)start.set(11.5,.1,-8+Math.random()*16);
-  if(edge===2)start.set(-8+Math.random()*16,.1,-11.5);
-  if(edge===3)start.set(-8+Math.random()*16,.1,11.5);
-  if(kind==='dragon')start.y=3.2;
+  const start=crowdStartFor(kind);
+  if(kind!=='dragon')start.y=.1;
+  const target=food?food.position.clone():snake[0].position.clone();
   obj.position.copy(start);obj.lookAt(target.x,obj.position.y,target.z);
-  obj.scale.multiplyScalar(kind==='dragon'?1.2:1.18);
-  obj.userData={...obj.userData,kind,state:'in',start:start.clone(),target:target.clone(),born:now,speed:kind==='dragon'?.06:.085,steal:false};
+  obj.scale.multiplyScalar(kind==='dragon'?1.25:1.2);
+  const role=kind==='soldier'?'blocker':'thief';
+  obj.userData={...obj.userData,kind,role,state:'in',start:start.clone(),target:target.clone(),born:now,speed:kind==='dragon'?.07:kind==='hero'?.095:.07,steal:false};
   npcGroup.add(obj);npcs.push(obj);
-  showCombo(kind==='dragon'?t('raidDragon'):t('raidInvader'));
-  sound('raid');
+  showCombo(kind==='dragon'?t('raidDragon'):t('raidInvader'));sound('raid');
+}
+function triggerRoyalEvent(t){
+  if(royalActive||dead)return;
+  royalActive=true;royalUntil=t+10000;nextRoyalScore+=160;showEvent(t('eventRoyal'),3200);sound('level');
+  const queen=crowd.find(x=>x.position.z<-13);if(queen)queen.scale.setScalar(1.22);
+  setTimeout(()=>{if(running&&!dead)spawnNpcRaid(performance.now(),'soldier')},650);
+  setTimeout(()=>{if(running&&!dead)spawnNpcRaid(performance.now(),'soldier')},1200);
+}
+function triggerDragonEvent(t){
+  if(dragonEventDone||level<4)return;
+  dragonEventDone=true;showEvent(t('eventDragon'),3200);sound('raid');
+  setTimeout(()=>{if(running&&!dead)spawnNpcRaid(performance.now(),'dragon')},500);
 }
 function updateNPCs(t){
   crowd.forEach((f,i)=>{
     const a=f.userData.arms;
-    if(a){a[0].rotation.z=Math.sin(t*.006+f.userData.phase)*.65;a[1].rotation.z=-Math.sin(t*.006+f.userData.phase)*.65;}
+    if(a){a[0].rotation.z=Math.sin(t*.006+(f.userData.phase||i))*.65;a[1].rotation.z=-Math.sin(t*.006+(f.userData.phase||i))*.65}
     f.position.y=Math.abs(Math.sin(t*.004+(f.userData.phase||i)))*.08;
-    if(f.userData.wings){f.userData.wings[0].rotation.y=Math.sin(t*.005)*.5;f.userData.wings[1].rotation.y=-Math.sin(t*.005)*.5;f.position.x=8.5+Math.sin(t*.0006)*4;}
+    if(f.userData.wings){f.userData.wings[0].rotation.y=Math.sin(t*.005)*.5;f.userData.wings[1].rotation.y=-Math.sin(t*.005)*.5;f.position.x=8.5+Math.sin(t*.0006)*4}
   });
-  if(running&&!paused&&!dead && t>nextNpcRaid){
-    spawnNpcRaid(t);
-    nextNpcRaid=t+Math.max(4200,7200-level*450)+Math.random()*2200;
+  if(royalActive&&t>royalUntil){royalActive=false;const queen=crowd.find(x=>x.position.z<-13);if(queen)queen.scale.setScalar(1.05)}
+  if(invasionUnlocked&&running&&!paused&&!dead&&t>nextNpcRaid){
+    spawnNpcRaid(t);nextNpcRaid=t+Math.max(5000,9000-level*450)+Math.random()*2400;
   }
+  if(score>=nextRoyalScore)triggerRoyalEvent(t);
+  triggerDragonEvent(t);
+
   npcs.slice().forEach(n=>{
-    const d=n.userData;
-    if(paused||dead)return;
-    if(d.wings){d.wings[0].rotation.y=Math.sin(t*.012)*.7;d.wings[1].rotation.y=-Math.sin(t*.012)*.7;}
-    if(d.state==='in'){
-      const dest=food?food.position:d.target;
-      const v=dest.clone().sub(n.position);v.y=d.kind==='dragon'?(dest.y+1.7-n.position.y):0;
-      if(v.length()>.18){v.normalize();n.position.add(v.multiplyScalar(d.speed));n.lookAt(dest.x,n.position.y,dest.z);}
-      const foodDx=food?Math.abs(n.position.x-food.position.x):999;
-      const foodDz=food?Math.abs(n.position.z-food.position.z):999;
-      if(food && Math.hypot(foodDx,foodDz)<1.0){
-        d.steal=true;d.state='out';
-        addParticleBurst(food.position.clone(),0xff6b35,22);
-        scene.remove(food);food=null;score=Math.max(0,score-5);updateHUD();showCombo(t('stolen'));sound('steal');
-        setTimeout(()=>{if(!food&&!dead)spawnFood()},520);
+    const d=n.userData;if(paused||dead)return;
+    if(d.wings){d.wings[0].rotation.y=Math.sin(t*.012)*.7;d.wings[1].rotation.y=-Math.sin(t*.012)*.7}
+    let dest;
+    if(d.state==='escape')dest=d.start;
+    else if(d.role==='blocker'&&snake[0])dest=snake[0].position.clone().add(new THREE.Vector3(direction.x*2,0,direction.z*2));
+    else dest=food?food.position:d.target;
+
+    const v=dest.clone().sub(n.position);
+    v.y=d.kind==='dragon'&&d.state!=='escape'?(dest.y+1.7-n.position.y):0;
+    if(v.length()>.18){v.normalize();n.position.add(v.multiplyScalar(d.speed*(d.state==='escape'?1.18:1)));n.lookAt(dest.x,n.position.y,dest.z)}
+
+    if(d.role==='thief'&&d.state==='in'&&food){
+      const dx=n.position.x-food.position.x,dz=n.position.z-food.position.z;
+      if(Math.hypot(dx,dz)<1.0){
+        d.state='escape';d.steal=true;stolenStar=food;food=null;
+        stolenStar.userData.thief=n;showCombo(t('stolen'));sound('steal');showEvent(t('stolen'),1700);
       }
-    }else{
-      const v=d.start.clone().sub(n.position);
-      if(v.length()>.25){v.normalize();n.position.add(v.multiplyScalar(d.speed*1.25));}
-      else{npcGroup.remove(n);npcs=npcs.filter(x=>x!==n);}
     }
-    if(snake[0] && Math.hypot(n.position.x-snake[0].position.x,n.position.z-snake[0].position.z)<.68){shake=.7;showCombo(t('collision'));die();}
+    if(d.state==='escape'&&stolenStar&&stolenStar.userData.thief===n){
+      stolenStar.position.set(n.position.x,n.position.y+1.35,n.position.z);stolenStar.rotation.y+=.12;
+      if(snake[0]&&Math.hypot(n.position.x-snake[0].position.x,n.position.z-snake[0].position.z)<1.05){
+        score+=20;addParticleBurst(stolenStar.position.clone(),0xffe866,34);scene.remove(stolenStar);stolenStar=null;
+        showCombo(t('starSaved'));sound('coin');npcGroup.remove(n);npcs=npcs.filter(x=>x!==n);spawnFood();updateHUD();return;
+      }
+      if(n.position.distanceTo(d.start)<.45){
+        score=Math.max(0,score-5);scene.remove(stolenStar);stolenStar=null;showCombo(t('stolen'));updateHUD();
+        npcGroup.remove(n);npcs=npcs.filter(x=>x!==n);setTimeout(()=>{if(!food&&!dead)spawnFood()},350);return;
+      }
+    } else if(d.state==='escape'&&n.position.distanceTo(d.start)<.45){
+      npcGroup.remove(n);npcs=npcs.filter(x=>x!==n);return;
+    }
+
+    if(d.role==='blocker'&&snake[0]&&Math.hypot(n.position.x-snake[0].position.x,n.position.z-snake[0].position.z)<.68){shake=.7;showCombo(t('collision'));die()}
+    if(d.role==='thief'&&d.state==='in'&&snake[0]&&Math.hypot(n.position.x-snake[0].position.x,n.position.z-snake[0].position.z)<.62){shake=.45;score=Math.max(0,score-3);updateHUD();d.state='escape'}
   });
 }
 
@@ -447,7 +483,7 @@ function clearActors(){
   while(particles.children.length)particles.remove(particles.children[0]);
 }
 function reset(){
-  clearActors();while(npcGroup.children.length)npcGroup.remove(npcGroup.children[0]);npcs=[];score=0;level=1;combo=0;dead=false;paused=false;baseInterval=155;direction={x:1,z:0};nextDirection={x:1,z:0};nextNpcRaid=performance.now()+2200;
+  clearActors();while(npcGroup.children.length)npcGroup.remove(npcGroup.children[0]);npcs=[];if(stolenStar)scene.remove(stolenStar);stolenStar=null;score=0;level=1;combo=0;starsCollected=0;invasionUnlocked=false;royalActive=false;royalUntil=0;nextRoyalScore=160;dragonEventDone=false;dead=false;paused=false;baseInterval=155;direction={x:1,z:0};nextDirection={x:1,z:0};nextNpcRaid=Infinity;
   for(let i=0;i<4;i++){
     const s=sphereSegment(i===0);s.position.copy(gridPos(-i,0));scene.add(s);snake.push(s);
   }
@@ -533,6 +569,7 @@ function sound(type){
 }
 function flash(){const e=$('flash');e.classList.remove('go');void e.offsetWidth;e.classList.add('go')}
 function showCombo(txt){const e=$('combo');e.textContent=txt;e.classList.remove('show');void e.offsetWidth;e.classList.add('show')}
+function showEvent(txt,ms=2200){const e=$('eventPill');e.textContent=txt;e.classList.add('show');clearTimeout(e._timer);e._timer=setTimeout(()=>e.classList.remove('show'),ms)}
 function updateHUD(){
   $('score').textContent=score;$('level').textContent=level;$('best').textContent=best;
   $('nextLevel').textContent=level*LEVEL_STEP;
@@ -586,7 +623,9 @@ function move(){
 
   if(ate){
     combo=(performance.now()-comboTimer<2500)?combo+1:1;comboTimer=performance.now();
-    const bonus=Math.min(combo-1,5)*2;score+=10+bonus;addParticleBurst(food.position.clone(),0xffe866,24);sound('eat');showCombo(combo>1?'COMBO x'+combo:' +10');
+    const bonus=Math.min(combo-1,5)*2,boostBonus=boosting?5:0;score+=10+bonus+boostBonus;starsCollected++;
+    addParticleBurst(food.position.clone(),0xffe866,24);sound('eat');showCombo(boosting?t('boostBonus')+' +'+(10+bonus+boostBonus):(combo>1?'COMBO x'+combo:' +10'));
+    if(starsCollected>=2&&!invasionUnlocked){invasionUnlocked=true;nextNpcRaid=performance.now()+1600;showEvent(t('raidInvader'),1800)}
     spawnFood();maybeLevelUp();updateHUD();
   }
   if(gotCoin){
@@ -650,12 +689,18 @@ function animate(t){
   updateNPCs(t);
 
   const targetX=direction.x*1.5,targetZ=direction.z*1.5;
+  const tablet=innerWidth>=521&&innerWidth<=1024;
+  const portrait=innerHeight>innerWidth;
+  const targetY=tablet?(portrait?22:18):19,targetBaseZ=tablet?(portrait?21:19):18;
+  camera.position.y+=(targetY-camera.position.y)*.025;
   camera.position.x+=(targetX-camera.position.x)*.02;
-  camera.position.z+=(18+targetZ-camera.position.z)*.02;
+  camera.position.z+=(targetBaseZ+targetZ-camera.position.z)*.02;
   if(shake>0){camera.position.x+=(Math.random()-.5)*shake;camera.position.y+=(Math.random()-.5)*shake;shake*=.9}
   camera.lookAt(0,0,0);
   renderer.render(scene,camera);
 }
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&running&&!paused&&!dead){paused=true;$('pauseBtn').textContent='▶';showCombo(t('pause'))}});
+window.addEventListener('orientationchange',()=>setTimeout(()=>window.dispatchEvent(new Event('resize')),120));
 window.addEventListener('resize',()=>{
   camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 });
