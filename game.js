@@ -433,11 +433,12 @@ function updateHUD(){
   $('livesHud').textContent='♥'.repeat(Math.max(0,gameState.player.lifeCount))+'♡'.repeat(Math.max(0,5-gameState.player.lifeCount));
   $('shieldHud').textContent=gameState.player.lifeCount===5&&gameState.player.shieldCharges>0?'🛡 ×'+gameState.player.shieldCharges:'';
 }
+function stageName(){const stages=t('stages');return Array.isArray(stages)?stages[(level-1)%stages.length]:''}
 function maybeLevelUp(){
   const target=Math.floor(score/LEVEL_STEP)+1;
   if(target>level){
     level=target;baseInterval=Math.max(72,155-(level-1)*12);buildObstacles();applyTheme();sound('level');flash();
-    $('levelBig').textContent=level;const b=$('levelBanner');b.classList.remove('show');void b.offsetWidth;b.classList.add('show');
+    $('levelBig').textContent=level;const b=$('levelBanner');b.classList.remove('show');void b.offsetWidth;b.classList.add('show');showEvent(stageName(),1900);
   }
 }
 function applyTheme(){
@@ -473,6 +474,8 @@ function playShieldBounce(){
 }
 function respawnAfterHit(){
   const len=Math.min(Math.max(4,snake.length),361),cells=spiralCells(len);
+  const safe=new Set(cells.map(p=>p.x+','+p.z));
+  obstacles.slice().forEach(o=>{if(safe.has(o.x+','+o.z)){scene.remove(o.mesh);obstacles=obstacles.filter(x=>x!==o)}});
   snake.forEach(o=>scene.remove(o));snake=[];
   direction={x:1,z:0};nextDirection={x:1,z:0};
   cells.forEach((cell,i)=>{
@@ -622,7 +625,7 @@ window.addEventListener('resize',()=>{
 });
 if(qaMode){
   window.__KUKAC_QA__={
-    snapshot:()=>({lives:gameState.player.lifeCount,shield:gameState.player.shieldCharges,score,level,food:!!food,stolen:!!gameState.progression.stolenCollectible,dead:gameState.session.isDead}),
+    snapshot:()=>({lives:gameState.player.lifeCount,shield:gameState.player.shieldCharges,score,level,food:!!food,stolen:!!gameState.progression.stolenCollectible,dead:gameState.session.isDead,inBounds:snake.every(s=>Math.abs(Math.round(s.position.x))<=9&&Math.abs(Math.round(s.position.z))<=9)}),
     collide:()=>{gameState.player.invulnerableUntilMs=0;handleCollision();return window.__KUKAC_QA__.snapshot()},
     setScore:v=>{score=v;updateHUD();return score},
     setLevel:v=>{level=v;return level},
