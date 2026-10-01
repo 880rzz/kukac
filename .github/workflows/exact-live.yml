@@ -7,7 +7,7 @@ on:
         description: Expected main commit SHA
         required: true
   workflow_run:
-    workflows: ["pages build and deployment"]
+    workflows: ["KUKAC 3D Browser QA"]
     types: [completed]
 
 permissions:
