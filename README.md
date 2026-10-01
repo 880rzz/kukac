@@ -35,7 +35,7 @@ GitHub Pages esetén a repó gyökerét kell publikálni.
 - A ritkán megjelenő **arany érme** +25 pontot ér, és nem hosszabbítja a kukacot.
 - Minden **80 pont** után új szint következik.
 - Szintlépéskor gyorsul a játék, változik a pálya atmoszférája és több téglás akadály jelenik meg.
-- Falnak, akadálynak vagy saját testnek ütközve véget ér a játék.
+- **5 élet** áll rendelkezésre. Az első életet **3 pajzs** védi; ezek elnyelik az első három komoly ütközést. Ezután minden komoly ütközés egy életet vesz le.
 - A legjobb pontszám a böngésző `localStorage` tárhelyén helyben megmarad.
 
 ## Látvány és hang
@@ -63,7 +63,13 @@ A hangeffektek nem hangfájlok: a játék futás közben, a **Web Audio API** se
 
 ## Fájlok
 
-- `index.html` — teljes játék, stílusokkal és logikával
+- `index.html` — HTML shell és HUD
+- `styles.css` — reszponzív UI és accessibility
+- `i18n.js` — DE / TR / UK / HU / EN fordítások
+- `world.js` — 3D aréna és környezet
+- `actors.js` — közönség, királynő, katonák, retro hősök és sárkány
+- `audio.js` — hangeffektek és rétegzett ambient/tension audio
+- `game.js` — játékmenet, állapotgép, kamera, input és QA interface
 - `README.md` — használati és technikai útmutató
 
 ## Reszponzivitás
@@ -81,7 +87,7 @@ A pálya körül most 3D közönség, királynő, katonák és sárkányok mozog
 - a betolakodó elviheti az aktuális csillagot
 - csillaglopáskor 5 pont levonás jár
 - a csillag rövid idő után új helyen jelenik meg
-- ha egy betolakodó eltalálja a kukac fejét, a menet véget ér
+- a katonák komoly ütközést okoznak; az első élet 3 pajzsa védi a kukacot, majd az életek fogynak
 - a rajtaütések a szintekkel fokozatosan gyakoribbá válnak
 
 A retro platformhősök saját, eredeti low-poly karakterek; nem használnak Super Mario grafikát, modellt vagy hangmintát.
@@ -135,3 +141,52 @@ A repó két GitHub Actions ellenőrzést tartalmaz:
 
 - `.github/workflows/smoke.yml` — HTML/JavaScript és alapfunkciók statikus smoke-checkje
 - `.github/workflows/browser-qa.yml` — headless Chromium teszt desktop, tablet és mobil viewporton, nyelvváltással, játékindítással és képernyőképes artifactokkal
+
+
+## 2026 AAA / first-principles polish
+
+A jelenlegi rendszer a következő production-elemeket tartalmazza:
+
+- centralizált `gameState` a játékos-, session- és progression-állapotokhoz
+- 5 élet + kizárólag az első élethez tartozó 3 pajzs
+- garantáltan pályán belüli spirális respawn hosszú kukac esetén is
+- reaktív 3D közönség: calm / tense / danger / celebrate állapotok
+- Dragon Attack előjelző kör, haptika és crowd reaction
+- Royal Event: felerősített királyi csillag és extra jutalom
+- erősebb csillag-vizuális hierarchia dinamikus PointLighttal
+- boost kamera-FOV változás
+- rétegzett ambient + tension Web Audio
+- mobil haptika támogatás
+- mobilon swipe az alap; a D-pad opcionálisan kapcsolható
+- jobb oldali hosszú érintésből boost
+- seedelt RNG: `?seed=42`
+- QA mód: `?qa=1&seed=42`
+
+### Szintek
+
+Az öt vizuális/progressziós identitás:
+
+1. Meadow / Rét
+2. Stadium / Stadion
+3. Royal Arena / Királyi Aréna
+4. Dragon Valley / Sárkányvölgy
+5. Night Arena / Éjszakai Aréna
+
+A ciklus magasabb szinteken ismétlődik növekvő sebességgel és akadálysűrűséggel.
+
+## Determinisztikus QA
+
+A Browser QA nemcsak betölti az oldalt, hanem seedelt játékmeneti regressziókat is ellenőriz:
+
+- német alapnyelv
+- nyelvváltás
+- desktop / tablet / mobile render
+- 5 kezdeti élet + 3 pajzs
+- első három ütközés csak pajzsot fogyaszt
+- negyedik ütközés: 5 → 4 élet
+- következő ütközés: 4 → 3 élet
+- respawn minden esetben pályán belül marad
+- collectible watchdog
+- Royal Event aktiválható
+- Dragon Event aktiválható
+- QA screenshot artifactok
