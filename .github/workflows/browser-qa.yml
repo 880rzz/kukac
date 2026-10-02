@@ -43,10 +43,18 @@ jobs:
               productionPage.on('pageerror', error => productionErrors.push(String(error)));
               await productionPage.goto('http://127.0.0.1:4173/', { waitUntil: 'domcontentloaded' });
               await productionPage.click('#startBtn');
+              if (await productionPage.locator('#account').evaluate(el => getComputedStyle(el).display) === 'none') throw new Error('production: profile gate did not open');
+              await productionPage.fill('#registerNickname','ProdSmoke');
+              await productionPage.fill('#registerPassword','prod-pass-42');
+              await productionPage.fill('#registerPassword2','prod-pass-42');
+              await productionPage.check('#privacyAck');
+              await productionPage.check('#ageAck');
+              await productionPage.click('#registerForm button[type="submit"]');
+              await productionPage.waitForFunction(() => window.KUKAC_ACCOUNT?.player?.nickname === 'ProdSmoke');
+              await productionPage.click('#closeAccount');
+              await productionPage.click('#startBtn');
               await productionPage.waitForTimeout(500);
-              if (await productionPage.locator('#start').evaluate(el => getComputedStyle(el).display) !== 'none') {
-                throw new Error('production: start overlay did not close');
-              }
+              if (await productionPage.locator('#start').evaluate(el => getComputedStyle(el).display) !== 'none') throw new Error('production: start overlay did not close after valid profile');
               if (productionErrors.length) throw new Error('production: page errors: ' + productionErrors.join(' | '));
               await productionPage.close();
 
