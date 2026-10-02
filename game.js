@@ -457,6 +457,7 @@ function togglePause(){
 }
 function toggleSound(){gameState.session.soundEnabled=!gameState.session.soundEnabled;$('soundBtn').textContent=gameState.session.soundEnabled?'🔊':'🔇';if(gameState.session.soundEnabled)sound('turn')}
 function startGame(){
+  if(!window.KUKAC_ACCOUNT?.requireProfile?.())return;
   audio.resume();startAudioLayers();
   $('start').style.display='none';$('gameover').style.display='none';reset();gameState.session.isRunning=true;window.KUKAC_ACCOUNT?.startRun();sound('start');
 }
@@ -482,7 +483,7 @@ $('boost').addEventListener('pointerdown',()=>boosting=true);$('boost').addEvent
 $('startBtn').onclick=startGame;$('restartBtn').onclick=restart;$('pauseBtn').onclick=togglePause;$('soundBtn').onclick=toggleSound;
 $('controlsToggle').onclick=()=>{document.body.classList.toggle('dpad');localStorage.setItem('kukac3d-dpad',document.body.classList.contains('dpad')?'1':'0')};
 if(localStorage.getItem('kukac3d-dpad')==='1')document.body.classList.add('dpad');
-$('helpBtn').onclick=()=>$('help').style.display='grid';$('showHelp').onclick=()=>$('help').style.display='grid';$('closeHelp').onclick=()=>$('help').style.display='none';
+$('helpBtn').onclick=()=>$('help').style.display='grid';$('showHelp').onclick=()=>$('help').style.display='grid';$('closeHelp').onclick=()=>$('help').style.display='none';document.querySelectorAll('.privacy-open').forEach(b=>b.onclick=()=>$('privacy').style.display='grid');$('closePrivacy').onclick=()=>$('privacy').style.display='none';$('privacyDone').onclick=()=>$('privacy').style.display='none';
 
 let sx=0,sy=0,holdBoostTimer=null;
 renderer.domElement.addEventListener('touchstart',e=>{const t=e.touches[0];if(t.clientX>innerWidth*0.68){holdBoostTimer=setTimeout(()=>{boosting=true;haptic(20)},260)}},{passive:true});
