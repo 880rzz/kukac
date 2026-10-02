@@ -87,7 +87,9 @@ jobs:
                   await page.waitForTimeout(100);
                   if (await page.locator('#account').evaluate(el => getComputedStyle(el).display) === 'none') throw new Error('desktop: account overlay did not open');
                   await page.click('[data-account-mode="register"]');
-                  await page.fill('#registerNickname','Alpha'); await page.fill('#registerPassword','alpha-pass-42'); await page.fill('#registerPassword2','alpha-pass-42'); await page.check('#privacyAck'); await page.check('#ageAck'); await page.click('#registerForm button[type="submit"]');
+                  await page.fill('#registerNickname','Alpha'); await page.fill('#registerPassword','alpha-pass-42'); await page.fill('#registerPassword2','alpha-pass-42'); await page.check('#privacyAck'); await page.click('#registerForm button[type="submit"]');
+                  await page.waitForTimeout(100); if (await page.evaluate(() => Boolean(window.KUKAC_ACCOUNT?.player))) throw new Error('desktop: under-12 gate bypassed');
+                  await page.check('#ageAck'); await page.click('#registerForm button[type="submit"]');
                   await page.waitForFunction(() => window.KUKAC_ACCOUNT?.player?.nickname === 'Alpha');
                   await page.evaluate(() => window.KUKAC_ACCOUNT.submitRun({score:120,level:3,stars:8,coins:2,bestCombo:4,starsRecovered:1,dragonSurvivals:1,royalStars:1}));
                   const backup = await page.evaluate(() => window.KUKAC_ACCOUNT.__test.backupFor('Alpha'));
