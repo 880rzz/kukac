@@ -122,6 +122,12 @@
       <label><span data-i18n="passwordLabel">Password</span><input id="registerPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" required></label>
       <label><span data-i18n="passwordAgainLabel">Password again</span><input id="registerPassword2" type="password" autocomplete="new-password" minlength="8" maxlength="128" required></label>
       <p class="microcopy" data-i18n="passwordHelp">Minimum 8 characters. The password is stored only as a salted one-way hash.</p>
+      <div class="privacy-box">
+        <h3 data-i18n="privacyTitle">Your data in KUKAC 3D</h3>
+        <p data-i18n="privacyKidSummary">Your profile stays in this browser. KUKAC has no central player database.</p>
+        <button class="secondary privacy-open" type="button" data-i18n="privacyReadButton">Read privacy information</button>
+        <label class="privacy-check"><input id="privacyAck" type="checkbox" required><span data-i18n="privacyAckLabel">I have read and understood the privacy information.</span></label>
+      </div>
       <button class="primary" type="submit" data-i18n="registerButton">Create Arcade ID</button>
     </form>
 
@@ -139,6 +145,32 @@
       <button id="copyBackupBtn" class="secondary" type="button" data-i18n="copyBackupButton">Copy recovery string</button>
       <button id="logoutBtn" class="secondary" type="button" data-i18n="logoutButton">Logout</button>
     </div>
+  </div>
+</div>
+
+<div class="overlay" id="privacy" style="display:none">
+  <div class="card privacy-card">
+    <div class="modal-head">
+      <div><small>KUKAC 3D</small><h2 data-i18n="privacyTitle">Your data in KUKAC 3D</h2></div>
+      <button class="iconbtn" id="closePrivacy" aria-label="Close">×</button>
+    </div>
+    <p class="privacy-lead" data-i18n="privacyLead">This page explains in simple language what happens to your data.</p>
+    <h3 data-i18n="privacyWhatTitle">What is stored?</h3>
+    <p data-i18n="privacyWhatText">Your nickname, a protected password hash, profile creation time and game statistics such as high score, levels, games, stars, coins and achievements.</p>
+    <h3 data-i18n="privacyWhereTitle">Where is it stored?</h3>
+    <p data-i18n="privacyWhereText">The Arcade ID and game statistics are stored locally in this browser on this device. They are not written into the public GitHub repository and KUKAC has no central player-profile database.</p>
+    <h3 data-i18n="privacyPasswordTitle">What about my password?</h3>
+    <p data-i18n="privacyPasswordText">Your readable password is not stored. The browser stores a salted PBKDF2-SHA-256 hash. Do not reuse an important password from school, email or another account.</p>
+    <h3 data-i18n="privacyHostingTitle">What happens when I open the game?</h3>
+    <p data-i18n="privacyHostingText">The game is delivered through GitHub Pages. The hosting provider may process technical connection data such as an IP address and request information when the page is loaded.</p>
+    <h3 data-i18n="privacyPublicTitle">Is my profile public?</h3>
+    <p data-i18n="privacyPublicText">There is no central public KUKAC profile or worldwide leaderboard. The local leaderboard only contains profiles saved in this browser. On a shared device, other people using the same browser profile may see those local nicknames and game statistics.</p>
+    <h3 data-i18n="privacyNicknameTitle">What should I use as a nickname?</h3>
+    <p data-i18n="privacyNicknameText">Use a fantasy name. Do not put your full real name, address, phone number, email address or other private information in your nickname.</p>
+    <h3 data-i18n="privacyDeleteTitle">How can I delete my data?</h3>
+    <p data-i18n="privacyDeleteText">You can delete your local Arcade ID from this browser. Clearing this site's browser storage also removes local KUKAC profiles and scores. Export a recovery backup first if you want to keep a profile.</p>
+    <p class="privacy-note" data-i18n="privacyAckExplain">The checkbox confirms that you have read this information. It is not permission for advertising or tracking.</p>
+    <button class="primary" id="privacyDone" type="button" data-i18n="privacyDoneButton">I understand</button>
   </div>
 </div>
 
