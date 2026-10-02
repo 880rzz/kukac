@@ -457,7 +457,7 @@ function togglePause(){
 }
 function toggleSound(){gameState.session.soundEnabled=!gameState.session.soundEnabled;$('soundBtn').textContent=gameState.session.soundEnabled?'🔊':'🔇';if(gameState.session.soundEnabled)sound('turn')}
 function startGame(){
-  if(!window.KUKAC_ACCOUNT?.requireProfile?.())return;
+  if(!qaMode&&!window.KUKAC_ACCOUNT?.requireProfile?.())return;
   audio.resume();startAudioLayers();
   $('start').style.display='none';$('gameover').style.display='none';reset();gameState.session.isRunning=true;window.KUKAC_ACCOUNT?.startRun();sound('start');
 }
