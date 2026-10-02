@@ -400,14 +400,12 @@ function handleCollision(){
 }
 function die(){
   if(gameState.session.isDead)return;gameState.session.isDead=true;gameState.session.isRunning=false;shake=0.55;sound('over');
-  const completedRun={
+  window.KUKAC_ACCOUNT?.submitRun({
     score,level,stars:gameState.progression.starCount,coins:gameState.run.coins,
     playMs:Math.max(0,Math.round(performance.now()-gameState.run.startedAt)),
     bestCombo:gameState.run.bestCombo,starsRecovered:gameState.run.starsRecovered,
     dragonSurvivals:gameState.run.dragonSurvivals,royalStars:gameState.run.royalStars
-  };
-  window.KUKAC_ACCOUNT?.submitRun(completedRun);
-  window.KUKAC_GLOBAL?.setResult({score:completedRun.score,level:completedRun.level,playMs:completedRun.playMs});
+  });
   if(score>best){best=score;localStorage.setItem('kukac3d-best',best);updateHUD()}
   setTimeout(()=>{ $('resultText').innerHTML=t('result')(score,level,best);$('gameover').style.display='grid';},350);
 }
