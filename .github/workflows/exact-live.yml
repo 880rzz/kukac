@@ -80,8 +80,8 @@ jobs:
                   await page.click('#closeAccount');
                 }
                 await page.selectOption('#startLangSelect','en');
-                const guest=(await page.locator('#startIdentity').innerText()).trim();
-                if(!guest)fail(vp.name+': empty local identity state');
+                const noProfile=(await page.locator('#startIdentity').innerText()).trim();
+                if(!noProfile)fail(vp.name+': empty local profile state');
                 await page.click('#startBtn');
                 if(await page.locator('#account').evaluate(el=>getComputedStyle(el).display)==='none')fail(vp.name+': profile gate did not open');
                 await page.fill('#registerNickname','Live'+vp.name);
@@ -161,7 +161,7 @@ jobs:
               if(!(await page.locator('#playerProfileContent').innerText()).includes('120'))fail('clickable player profile wrong');
 
               await page.evaluate(()=>localStorage.clear()); await page.reload({waitUntil:'networkidle'});
-              if(await page.evaluate(()=>Boolean(window.KUKAC_ACCOUNT?.player)))fail('storage clear did not return to guest');
+              if(await page.evaluate(()=>Boolean(window.KUKAC_ACCOUNT?.player)))fail('storage clear did not return to no-profile state');
               await page.click('#startIdentity'); await page.click('[data-account-mode="recover"]');
               await page.fill('#recoveryCodeInput',recovery.slice(0,-4)+'XXXX'); await page.click('#recoverForm button[type="submit"]'); await page.waitForTimeout(150);
               if(await page.evaluate(()=>Boolean(window.KUKAC_ACCOUNT?.player)))fail('tampered recovery accepted');
