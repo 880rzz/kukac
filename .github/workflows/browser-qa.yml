@@ -80,7 +80,7 @@ jobs:
                   if (await page.locator('#startLangSelect').inputValue() !== locale) throw new Error(vp.name + ': language switching failed: ' + locale);
                 }
                 const startText = (await page.locator('#startBtn').innerText()).trim();
-                if (startText !== 'START GAME') throw new Error(vp.name + ': English copy failed: ' + startText);
+                if (startText !== 'CREATE PROFILE & PLAY') throw new Error(vp.name + ': English no-profile copy failed: ' + startText);
 
                 if (vp.name === 'desktop') {
                   await page.click('#startIdentity');

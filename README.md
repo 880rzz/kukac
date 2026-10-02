@@ -205,7 +205,7 @@ Funkciók:
 - profil- és statisztika-mentés `localStorage`-ban
 - letölthető JSON recovery backup és másolható recovery string
 - JSON vagy recovery string alapú visszaállítás tárhelytörlés után
-- belépés nélküli guest játék
+- kötelező helyi játékosprofil a játék indításához
 - teljes DE / TR / UK / HU / EN felület
 
 Fontos korlát: ez nem szerveroldali fiók. A jelszóhash, a profil és az eredmények a felhasználó saját böngészőjében vannak, ezért módosíthatók. GitHub Pages-only módban biztonságos globális ranglista, valódi globális nicknév-egyediség, szerveroldali anti-cheat és eszközök közötti automatikus szinkron nem valósítható meg. Tárhely- vagy cookie-törlés előtt recovery backupot kell exportálni.
@@ -216,4 +216,4 @@ Fontos korlát: ez nem szerveroldali fiók. A jelszóhash, a profil és az eredm
 npm test
 ```
 
-A GitHub Actions statikus ellenőrzést és Chromium-alapú desktop, tablet, mobil E2E tesztet futtat. Az E2E lefedi a profil-létrehozást, hibás és helyes belépést, több helyi profilt, rangsort, kattintható profilt, statisztikamentést, recovery-visszaállítást, guest módot és az öt nyelvet.
+A GitHub Actions statikus ellenőrzést és Chromium-alapú desktop, tablet, mobil E2E tesztet futtat. Az E2E lefedi a profil-létrehozást, hibás és helyes belépést, több helyi profilt, rangsort, kattintható profilt, statisztikamentést, recovery-visszaállítást, a kötelező profilkaput és az öt nyelvet.
