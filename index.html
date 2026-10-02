@@ -68,7 +68,7 @@
       <span data-i18n="ruleStar">⭐ STERN HOLEN</span>
       <span data-i18n="ruleSurvive">⚠ NICHT CRASHEN</span>
     </div>
-    <button class="identity-chip" id="startIdentity" type="button"><span id="arcadeIdentity">Gast</span></button>
+    <button class="identity-chip" id="startIdentity" type="button"><span id="arcadeIdentity">Spielerprofil erstellen</span></button>
     <button class="primary" id="startBtn" data-i18n="startBtn">SPIEL STARTEN</button>
     <button class="secondary" id="showHelp" data-i18n="helpBtnText">Vollständige Anleitung</button>
   </div>
@@ -100,13 +100,13 @@
 <div class="overlay" id="account" style="display:none">
   <div class="card account-card">
     <div class="modal-head">
-      <div><small>KUKAC ARCADE ID</small><h2 data-i18n="accountTitle">Arcade ID</h2></div>
+      <div><small>KUKAC 3D</small><h2 data-i18n="accountTitle">Spielerprofil</h2></div>
       <button class="iconbtn" id="closeAccount" aria-label="Close">×</button>
     </div>
     <div class="account-tabs">
-      <button data-account-mode="login" class="active" data-i18n="loginTab">Login</button>
-      <button data-account-mode="register" data-i18n="registerTab">Register</button>
-      <button data-account-mode="recover" data-i18n="recoverTab">Restore</button>
+      <button data-account-mode="login" class="active" data-i18n="loginTab">Anmelden</button>
+      <button data-account-mode="register" data-i18n="registerTab">Neu</button>
+      <button data-account-mode="recover" data-i18n="recoverTab">Wiederherstellen</button>
       <button data-account-mode="profile" data-i18n="profileTab">Profile</button>
     </div>
     <div id="accountMessage" class="account-message"></div>
@@ -130,7 +130,7 @@
         <label class="privacy-check"><input id="ageAck" type="checkbox" required><span data-i18n="ageAckLabel">I am 12 years old or older.</span></label>
         <p class="microcopy age-note" data-i18n="ageRule">KUKAC 3D cannot be played by children under 12.</p>
       </div>
-      <button class="primary" type="submit" data-i18n="registerButton">Create Arcade ID</button>
+      <button class="primary" type="submit" data-i18n="registerButton">Spielerprofil erstellen</button>
     </form>
 
     <form id="recoverForm" data-account-pane="recover" class="account-pane" hidden>
