@@ -132,3 +132,9 @@ body.dpad #controls{opacity:1;pointer-events:auto;transform:scale(1)}
 .privacy-card p{font-size:13px;line-height:1.55;margin:5px 0 16px}
 .privacy-lead{font-size:15px!important}.privacy-note{padding:12px;border-radius:14px;background:rgba(255,213,74,.08);border:1px solid rgba(255,213,74,.18)}
 .danger{border-color:rgba(255,110,110,.28)!important}
+
+.leaderboard-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 0 12px}
+.leaderboard-tabs button{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#fff;padding:9px 8px;border-radius:12px;font:700 11px inherit;cursor:pointer}
+.leaderboard-tabs button.active{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.25)}
+#submitGlobalStatus[data-kind="error"]{color:#ff9f9f}
+#submitGlobalStatus[data-kind="success"]{color:#aaf5b7}
