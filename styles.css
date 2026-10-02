@@ -118,3 +118,7 @@ body.dpad #controls{opacity:1;pointer-events:auto;transform:scale(1)}
  .leader-head,.leader-row{grid-template-columns:36px minmax(0,1fr) 70px 44px}
  .leaderboard-card{padding:20px 14px}
 }
+
+
+.creator-credit{margin:6px 0 14px;font-size:14px;opacity:.78;letter-spacing:.02em}
+.creator-credit strong{font-weight:700}
