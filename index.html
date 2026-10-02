@@ -92,6 +92,9 @@
   <div class="card">
     <h1 data-i18n-html="gameOverTitle">SPIEL <em>VORBEI</em></h1>
     <p id="resultText">Punkte: 0</p>
+    <button class="primary" id="submitGlobalBtn" type="button" hidden data-i18n="submitGlobalButton">ERGEBNIS SENDEN</button>
+    <p id="submitGlobalStatus" class="microcopy"></p>
+    <button class="secondary" id="openGlobalLeaderboardBtn" type="button" hidden data-i18n="globalLeaderboardButton">GEMEINSAME RANGLISTE</button>
     <button class="primary" id="restartBtn" data-i18n="restartBtn">NOCHMAL</button>
   </div>
 </div>
@@ -191,8 +194,13 @@
       <div><small>KUKAC ARCADE</small><h2 data-i18n="leaderboardTitle">Local Leaderboard</h2></div>
       <button class="iconbtn" id="closeLeaderboard" aria-label="Close">×</button>
     </div>
+    <div class="leaderboard-tabs">
+      <button id="localLeaderboardTab" class="active" type="button" data-i18n="localLeaderboardTab">Dieses Gerät</button>
+      <button id="globalLeaderboardTab" type="button" hidden data-i18n="globalLeaderboardTab">Gemeinsam</button>
+    </div>
     <div class="leader-head"><span>#</span><span data-i18n="nicknameLabel">Nickname</span><span data-i18n="scoreLabel">Score</span><span>LVL</span></div>
     <div id="leaderboardBody"></div>
+    <div id="globalLeaderboardBody" hidden></div>
   </div>
 </div>
 
@@ -212,6 +220,8 @@
 <script src="actors.js"></script>
 <script src="audio.js"></script>
 <script src="account.js"></script>
+<script src="leaderboard-config.js"></script>
+<script src="leaderboard.js"></script>
 <script src="game.js"></script>
 </body>
 </html>
