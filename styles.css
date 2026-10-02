@@ -122,3 +122,13 @@ body.dpad #controls{opacity:1;pointer-events:auto;transform:scale(1)}
 
 .creator-credit{margin:6px 0 14px;font-size:14px;opacity:.78;letter-spacing:.02em}
 .creator-credit strong{font-weight:700}
+
+.privacy-box{display:grid;gap:10px;padding:14px;border:1px solid rgba(255,213,74,.2);border-radius:16px;background:rgba(255,213,74,.06)}
+.privacy-box h3,.privacy-card h3{margin:0;font-size:15px}
+.privacy-box p{margin:0!important;font-size:12px!important;line-height:1.5!important}
+.privacy-check{grid-template-columns:22px 1fr!important;align-items:start!important;font-weight:650!important;line-height:1.45}
+.privacy-check input{width:18px!important;height:18px!important;margin-top:1px;accent-color:#ffd54a}
+.privacy-card{width:min(700px,100%);max-height:min(86vh,820px);overflow:auto}
+.privacy-card p{font-size:13px;line-height:1.55;margin:5px 0 16px}
+.privacy-lead{font-size:15px!important}.privacy-note{padding:12px;border-radius:14px;background:rgba(255,213,74,.08);border:1px solid rgba(255,213,74,.18)}
+.danger{border-color:rgba(255,110,110,.28)!important}
