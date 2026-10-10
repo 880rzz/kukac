@@ -192,23 +192,13 @@ A Browser QA nemcsak betölti az oldalt, hanem seedelt játékmeneti regresszió
 - QA screenshot artifactok
 
 
-## Arcade ID: tisztán helyi, GitHub Pages-kompatibilis
+## Vendég mód és fekvő mobilnézet
 
-Az Arcade ID teljes egészében a böngészőben működik, szerver, cookie, Vercel és Neon nélkül.
+A játék bejelentkezés, regisztráció és profil létrehozása nélkül indul. A legjobb pontszám továbbra is helyben, a böngészőben tárolódik.
 
-Funkciók:
+Telefonon a fekvő nézet ajánlott. Álló módban elforgatási útmutató jelenik meg. A kukac húzógesztussal vagy opcionális D-paddal irányítható; a BOOST külön gomb.
 
-- nicknév + legalább 8 karakteres jelszó/PIN
-- a jelszó csak sózott `PBKDF2-SHA-256` hashként tárolódik, 210 000 iterációval
-- több helyi profil egy böngészőben
-- helyi ranglista, kattintható nicknév és részletes profil-statisztika
-- profil- és statisztika-mentés `localStorage`-ban
-- letölthető JSON recovery backup és másolható recovery string
-- JSON vagy recovery string alapú visszaállítás tárhelytörlés után
-- kötelező helyi játékosprofil a játék indításához
-- teljes DE / TR / UK / HU / EN felület
-
-Fontos korlát: ez nem szerveroldali fiók. A jelszóhash, a profil és az eredmények a felhasználó saját böngészőjében vannak, ezért módosíthatók. GitHub Pages-only módban biztonságos globális ranglista, valódi globális nicknév-egyediség, szerveroldali anti-cheat és eszközök közötti automatikus szinkron nem valósítható meg. Tárhely- vagy cookie-törlés előtt recovery backupot kell exportálni.
+A **3D TILT** kapcsoló bekapcsolja a készülék mozgásérzékelőjével vezérelt, finom 3D kameramozgást. Ez csak a kamera nézőpontját változtatja, a kukac mozgási irányát nem. A kameraeltérés korlátozott, a játék kikapcsolt érzékelővel is használható. iOS Safari esetén a felhasználó külön mozgásérzékelő-engedélyét kérheti a böngésző.
 
 ## Ellenőrzés
 
@@ -216,4 +206,4 @@ Fontos korlát: ez nem szerveroldali fiók. A jelszóhash, a profil és az eredm
 npm test
 ```
 
-A GitHub Actions statikus ellenőrzést és Chromium-alapú desktop, tablet, mobil E2E tesztet futtat. Az E2E lefedi a profil-létrehozást, hibás és helyes belépést, több helyi profilt, rangsort, kattintható profilt, statisztikamentést, recovery-visszaállítást, a kötelező profilkaput és az öt nyelvet.
+A GitHub Actions böngészős QA desktop, álló és fekvő mobilnézetben vizsgálja a vendégindítást, a vezérlést és a 3D TILT kapcsolót. A tényleges giroszkóp és a teljes pálya láthatóságának végső ellenőrzése valódi készüléken szükséges.
