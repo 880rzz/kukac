@@ -27,8 +27,6 @@
       </select>
       <button class="iconbtn" id="soundBtn" aria-label="Ton an/aus">🔊</button>
       <button class="iconbtn" id="controlsToggle" aria-label="Steuerung">🎮</button>
-      <button class="iconbtn" id="leaderboardBtn" aria-label="Leaderboard">🏆</button>
-      <button class="iconbtn" id="accountBtn" aria-label="Arcade ID">👤</button>
       <button class="iconbtn hide-mobile" id="helpBtn" aria-label="Súgó">?</button>
       <button class="iconbtn" id="pauseBtn" aria-label="Szünet">Ⅱ</button>
     </div>
@@ -49,6 +47,7 @@
 </div>
 <button id="boost">BOOST</button>
 
+<div id="rotateHint" role="status" aria-live="polite"><strong>Fordítsd el a telefonodat</strong><span>A játék fekvő képernyőn működik a legjobban.</span></div>
 <div class="overlay" id="start">
   <div class="card">
     <div class="start-lang">
@@ -68,7 +67,6 @@
       <span data-i18n="ruleStar">⭐ STERN HOLEN</span>
       <span data-i18n="ruleSurvive">⚠ NICHT CRASHEN</span>
     </div>
-    <button class="identity-chip" id="startIdentity" type="button"><span id="arcadeIdentity">Gastprofil</span></button>
     <button class="primary" id="startBtn" data-i18n="startBtn">SPIEL STARTEN</button>
     <button class="secondary" id="showHelp" data-i18n="helpBtnText">Vollständige Anleitung</button>
   </div>
@@ -97,121 +95,12 @@
 </div>
 
 
-<div class="overlay" id="account" style="display:none">
-  <div class="card account-card">
-    <div class="modal-head">
-      <div><small>KUKAC 3D</small><h2 data-i18n="accountTitle">Spielerprofil</h2></div>
-      <button class="iconbtn" id="closeAccount" aria-label="Close">×</button>
-    </div>
-    <div class="account-tabs">
-      <button data-account-mode="login" class="active" data-i18n="loginTab">Anmelden</button>
-      <button data-account-mode="register" data-i18n="registerTab">Neu</button>
-      <button data-account-mode="recover" data-i18n="recoverTab">Wiederherstellen</button>
-      <button data-account-mode="profile" data-i18n="profileTab">Profile</button>
-    </div>
-    <div id="accountMessage" class="account-message"></div>
-
-    <form id="loginForm" data-account-pane="login" class="account-pane">
-      <label><span data-i18n="nicknameLabel">Nickname</span><input id="loginNickname" autocomplete="username" maxlength="20" required></label>
-      <label><span data-i18n="passwordLabel">Password</span><input id="loginPassword" type="password" autocomplete="current-password" minlength="8" maxlength="128" required></label>
-      <button class="primary" type="submit" data-i18n="loginButton">Login</button>
-    </form>
-
-    <form id="registerForm" data-account-pane="register" class="account-pane" hidden>
-      <label><span data-i18n="nicknameLabel">Nickname</span><input id="registerNickname" autocomplete="username" maxlength="20" required></label>
-      <label><span data-i18n="passwordLabel">Password</span><input id="registerPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" required></label>
-      <label><span data-i18n="passwordAgainLabel">Password again</span><input id="registerPassword2" type="password" autocomplete="new-password" minlength="8" maxlength="128" required></label>
-      <p class="microcopy" data-i18n="passwordHelp">Minimum 8 characters. The password is stored only as a salted one-way hash.</p>
-      <div class="privacy-box">
-        <h3 data-i18n="privacyTitle">Your data in KUKAC 3D</h3>
-        <p data-i18n="privacyKidSummary">Your profile stays in this browser. KUKAC has no central player database.</p>
-        <button class="secondary privacy-open" type="button" data-i18n="privacyReadButton">Read privacy information</button>
-        <label class="privacy-check"><input id="privacyAck" type="checkbox" required><span data-i18n="privacyAckLabel">I have read and understood the privacy information.</span></label>
-        <label class="privacy-check"><input id="ageAck" type="checkbox" required><span data-i18n="ageAckLabel">I am 12 years old or older.</span></label>
-        <p class="microcopy age-note" data-i18n="ageRule">KUKAC 3D cannot be played by children under 12.</p>
-      </div>
-      <button class="primary" type="submit" data-i18n="registerButton">Spielerprofil erstellen</button>
-    </form>
-
-    <form id="recoverForm" data-account-pane="recover" class="account-pane" hidden>
-      <p data-i18n="recoverHelp">Paste a KUKAC recovery string or choose an exported JSON backup. This restores the local profile and statistics.</p>
-      <label><span data-i18n="recoveryCodeLabel">Recovery backup</span><textarea id="recoveryCodeInput" autocomplete="off" rows="4" placeholder="KUKAC1.…"></textarea></label>
-      <button class="primary" type="submit" data-i18n="recoverButton">Restore backup</button>
-      <label class="file-button"><span data-i18n="importBackupButton">Import JSON backup</span><input id="backupFileInput" type="file" accept="application/json,.json"></label>
-    </form>
-
-    <div data-account-pane="profile" class="account-pane" hidden>
-      <div id="myProfileSummary"></div>
-      <form id="legacyEligibilityForm" class="privacy-box" hidden>
-        <h3 data-i18n="eligibilityUpdateTitle">One-time update</h3>
-        <p data-i18n="eligibilityUpdateText">This older local profile needs the current privacy and 12+ confirmation before playing.</p>
-        <button class="secondary privacy-open" type="button" data-i18n="privacyReadButton">Read privacy information</button>
-        <label class="privacy-check"><input id="legacyPrivacyAck" type="checkbox" required><span data-i18n="privacyAckLabel">I have read and understood the privacy information.</span></label>
-        <label class="privacy-check"><input id="legacyAgeAck" type="checkbox" required><span data-i18n="ageAckLabel">I am 12 years old or older.</span></label>
-        <button class="primary" type="submit" data-i18n="eligibilityUpdateButton">Confirm and continue</button>
-      </form>
-      <p class="local-notice" data-i18n="localOnlyNotice">Profiles and ranking exist only in this browser. GitHub Pages cannot provide a secure global account or leaderboard.</p>
-      <button id="exportBackupBtn" class="secondary" type="button" data-i18n="exportBackupButton">Download recovery JSON</button>
-      <button id="copyBackupBtn" class="secondary" type="button" data-i18n="copyBackupButton">Copy recovery string</button>
-      <button id="logoutBtn" class="secondary" type="button" data-i18n="logoutButton">Logout</button>
-      <button id="deleteProfileBtn" class="secondary danger" type="button" data-i18n="deleteProfileButton">Delete local profile</button>
-    </div>
-  </div>
-</div>
-
-<div class="overlay" id="privacy" style="display:none">
-  <div class="card privacy-card">
-    <div class="modal-head">
-      <div><small>KUKAC 3D</small><h2 data-i18n="privacyTitle">Your data in KUKAC 3D</h2></div>
-      <button class="iconbtn" id="closePrivacy" aria-label="Close">×</button>
-    </div>
-    <p class="privacy-lead" data-i18n="privacyLead">This page explains in simple language what happens to your data.</p>
-    <h3 data-i18n="privacyWhatTitle">What is stored?</h3>
-    <p data-i18n="privacyWhatText">Your nickname, a protected password hash, profile creation time and game statistics such as high score, levels, games, stars, coins and achievements.</p>
-    <h3 data-i18n="privacyWhereTitle">Where is it stored?</h3>
-    <p data-i18n="privacyWhereText">The Arcade ID and game statistics are stored locally in this browser on this device. They are not written into the public GitHub repository and KUKAC has no central player-profile database.</p>
-    <h3 data-i18n="privacyPasswordTitle">What about my password?</h3>
-    <p data-i18n="privacyPasswordText">Your readable password is not stored. The browser stores a salted PBKDF2-SHA-256 hash. Do not reuse an important password from school, email or another account.</p>
-    <h3 data-i18n="privacyHostingTitle">What happens when I open the game?</h3>
-    <p data-i18n="privacyHostingText">The game is delivered through GitHub Pages. The hosting provider may process technical connection data such as an IP address and request information when the page is loaded.</p>
-    <h3 data-i18n="privacyPublicTitle">Is my profile public?</h3>
-    <p data-i18n="privacyPublicText">There is no central public KUKAC profile or worldwide leaderboard. The local leaderboard only contains profiles saved in this browser. On a shared device, other people using the same browser profile may see those local nicknames and game statistics.</p>
-    <h3 data-i18n="privacyNicknameTitle">What should I use as a nickname?</h3>
-    <p data-i18n="privacyNicknameText">Use a fantasy name. Do not put your full real name, address, phone number, email address or other private information in your nickname.</p>
-    <h3 data-i18n="privacyDeleteTitle">How can I delete my data?</h3>
-    <p data-i18n="privacyDeleteText">You can delete your local Arcade ID from this browser. Clearing this site's browser storage also removes local KUKAC profiles and scores. Export a recovery backup first if you want to keep a profile.</p>
-    <p class="privacy-note" data-i18n="privacyAckExplain">The checkbox confirms that you have read this information. It is not permission for advertising or tracking.</p>
-    <button class="primary" id="privacyDone" type="button" data-i18n="privacyDoneButton">I understand</button>
-  </div>
-</div>
-
-<div class="overlay" id="leaderboard" style="display:none">
-  <div class="card leaderboard-card">
-    <div class="modal-head">
-      <div><small>KUKAC ARCADE</small><h2 data-i18n="leaderboardTitle">Local Leaderboard</h2></div>
-      <button class="iconbtn" id="closeLeaderboard" aria-label="Close">×</button>
-    </div>
-    <div class="leader-head"><span>#</span><span data-i18n="nicknameLabel">Nickname</span><span data-i18n="scoreLabel">Score</span><span>LVL</span></div>
-    <div id="leaderboardBody"></div>
-  </div>
-</div>
-
-<div class="overlay" id="playerProfile" style="display:none">
-  <div class="card profile-card">
-    <div class="modal-head">
-      <div><small>KUKAC ARCADE</small><h2 data-i18n="playerStatsTitle">Player stats</h2></div>
-      <button class="iconbtn" id="closePlayerProfile" aria-label="Close">×</button>
-    </div>
-    <div id="playerProfileContent"></div>
-  </div>
-</div>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="i18n.js"></script>
 <script src="world.js"></script>
 <script src="actors.js"></script>
 <script src="audio.js"></script>
-<script src="account.js"></script>
+
 <script src="game.js"></script>
 </body>
 </html>
