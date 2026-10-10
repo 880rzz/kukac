@@ -33,7 +33,7 @@ jobs:
                 if(await page.locator('#accountBtn,#loginForm,#registerForm').count())throw Error('Account UI remains');
                 if(vp.name==='portrait'&&!await page.locator('#rotateHint').isVisible())throw Error('Portrait hint missing');
                 if(vp.name==='landscape'&&await page.locator('#rotateHint').isVisible())throw Error('Landscape blocked');
-                await page.locator('#startBtn').click({force:true});
+                await page.locator('#startBtn').evaluate(e=>e.click());
                 if(await page.locator('#start').isVisible())throw Error('Guest start failed');
                 if(await page.locator('canvas').count()!==1)throw Error('Canvas missing');
                 if(vp.mobile&&await page.locator('#boost').evaluate(e=>getComputedStyle(e).display==='none'))throw Error('Boost missing');
