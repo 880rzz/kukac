@@ -37,6 +37,19 @@ jobs:
                 if(await page.locator('#start').isVisible())throw Error('Guest start failed');
                 if(await page.locator('canvas').count()!==1)throw Error('Canvas missing');
                 if(vp.mobile&&await page.locator('#boost').evaluate(e=>getComputedStyle(e).display==='none'))throw Error('Boost missing');
+                if(vp.name==='landscape'){
+                  const tilt=page.locator('#gyroToggle');
+                  if(!await tilt.isVisible())throw Error('Tilt control hidden');
+                  await tilt.click();
+                  if(await tilt.getAttribute('aria-pressed')!=='true')throw Error('Tilt did not enable');
+                  await page.evaluate(()=>{
+                    window.dispatchEvent(new DeviceOrientationEvent('deviceorientation',{beta:15,gamma:8}));
+                    window.dispatchEvent(new DeviceOrientationEvent('deviceorientation',{beta:23,gamma:15}));
+                  });
+                  await page.waitForTimeout(200);
+                  await tilt.click();
+                  if(await tilt.getAttribute('aria-pressed')!=='false')throw Error('Tilt did not disable');
+                }
                 if(errors.length)throw Error(errors.join(' | '));
                 await page.screenshot({path:'qa-'+vp.name+'.png'});
                 await page.close();
