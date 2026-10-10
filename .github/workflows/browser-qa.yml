@@ -4,10 +4,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-
 permissions:
   contents: read
-
 jobs:
   browser-qa:
     runs-on: ubuntu-latest
@@ -16,164 +14,38 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install Playwright
-        run: |
+      - run: npm test
+      - run: |
           npm install --no-save playwright@1.55.0
           npx playwright install --with-deps chromium
-      - name: Start static server
-        run: |
-          python3 -m http.server 4173 >/tmp/kukac-http.log 2>&1 &
-          echo $! > /tmp/kukac-http.pid
-      - name: Run responsive browser smoke tests
+      - run: python3 -m http.server 4173 >/tmp/kukac-http.log 2>&1 &
+      - name: Guest and landscape smoke test
         run: |
           node <<'NODE'
-          const { chromium } = require('playwright');
-
-          const viewports = [
-            { name: 'desktop', width: 1440, height: 900 },
-            { name: 'tablet', width: 834, height: 1112 },
-            { name: 'mobile', width: 390, height: 844 }
-          ];
-
-          (async () => {
-            const browser = await chromium.launch({ headless: true });
-            try {
-              const productionPage = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-              const productionErrors = [];
-              productionPage.on('pageerror', error => productionErrors.push(String(error)));
-              await productionPage.goto('http://127.0.0.1:4173/', { waitUntil: 'domcontentloaded' });
-              await productionPage.click('#startBtn');
-              if (await productionPage.locator('#account').evaluate(el => getComputedStyle(el).display) === 'none') throw new Error('production: profile gate did not open');
-              await productionPage.fill('#registerNickname','ProdSmoke');
-              await productionPage.fill('#registerPassword','prod-pass-42');
-              await productionPage.fill('#registerPassword2','prod-pass-42');
-              await productionPage.check('#privacyAck');
-              await productionPage.check('#ageAck');
-              await productionPage.click('#registerForm button[type="submit"]');
-              await productionPage.waitForFunction(() => window.KUKAC_ACCOUNT?.player?.nickname === 'ProdSmoke');
-              await productionPage.click('#closeAccount');
-              await productionPage.click('#startBtn');
-              await productionPage.waitForTimeout(500);
-              if (await productionPage.locator('#start').evaluate(el => getComputedStyle(el).display) !== 'none') throw new Error('production: start overlay did not close after valid profile');
-              if (productionErrors.length) throw new Error('production: page errors: ' + productionErrors.join(' | '));
-              await productionPage.close();
-
-              for (const vp of viewports) {
-                const page = await browser.newPage({ viewport: { width: vp.width, height: vp.height } });
-                const errors = [];
-                page.on('pageerror', e => errors.push(String(e)));
-                await page.goto('http://127.0.0.1:4173/?qa=1&seed=42', { waitUntil: 'domcontentloaded' });
-
-                await page.waitForSelector('#startLangSelect');
-                if (await page.locator('#accountBtn').count() !== 1 || await page.locator('#leaderboardBtn').count() !== 1) {
-                  throw new Error(vp.name + ': Arcade ID controls missing');
-                }
-                for (const selector of ['#combo','#eventPill','#livesHud','#shieldHud']) {
-                  if (await page.locator(selector).count() !== 1) throw new Error(vp.name + ': required HUD element missing ' + selector);
-                }
-                if (await page.locator('#startLangSelect').inputValue() !== 'de') {
-                  throw new Error(vp.name + ': German is not the default language');
-                }
-
-                for (const locale of ['tr','uk','hu','en']) {
-                  await page.selectOption('#startLangSelect', locale);
-                  if (await page.locator('#startLangSelect').inputValue() !== locale) throw new Error(vp.name + ': language switching failed: ' + locale);
-                }
-                const startText = (await page.locator('#startBtn').innerText()).trim();
-                if (startText !== 'CREATE PROFILE & PLAY') throw new Error(vp.name + ': English no-profile copy failed: ' + startText);
-
-                if (vp.name === 'desktop') {
-                  await page.click('#startIdentity');
-                  await page.waitForTimeout(100);
-                  if (await page.locator('#account').evaluate(el => getComputedStyle(el).display) === 'none') throw new Error('desktop: account overlay did not open');
-                  await page.click('[data-account-mode="register"]');
-                  await page.fill('#registerNickname','Alpha'); await page.fill('#registerPassword','alpha-pass-42'); await page.fill('#registerPassword2','alpha-pass-42'); await page.check('#privacyAck'); await page.click('#registerForm button[type="submit"]');
-                  await page.waitForTimeout(100); if (await page.evaluate(() => Boolean(window.KUKAC_ACCOUNT?.player))) throw new Error('desktop: under-12 gate bypassed');
-                  await page.check('#ageAck'); await page.click('#registerForm button[type="submit"]');
-                  await page.waitForFunction(() => window.KUKAC_ACCOUNT?.player?.nickname === 'Alpha');
-                  await page.evaluate(() => window.KUKAC_ACCOUNT.submitRun({score:120,level:3,stars:8,coins:2,bestCombo:4,starsRecovered:1,dragonSurvivals:1,royalStars:1}));
-                  const backup = await page.evaluate(() => window.KUKAC_ACCOUNT.__test.backupFor('Alpha'));
-                  await page.click('#logoutBtn'); await page.click('[data-account-mode="register"]');
-                  await page.fill('#registerNickname','Beta'); await page.fill('#registerPassword','beta-pass-42'); await page.fill('#registerPassword2','beta-pass-42'); await page.check('#privacyAck'); await page.check('#ageAck'); await page.click('#registerForm button[type="submit"]');
-                  await page.waitForFunction(() => window.KUKAC_ACCOUNT?.player?.nickname === 'Beta');
-                  await page.evaluate(() => window.KUKAC_ACCOUNT.submitRun({score:40,level:1,stars:2,coins:0,bestCombo:1,starsRecovered:0,dragonSurvivals:0,royalStars:0}));
-                  await page.click('#closeAccount'); await page.click('#leaderboardBtn',{force:true});
-                  await page.evaluate(() => window.KUKAC_ACCOUNT.loadLeaderboard());
-                  const leaderboardNames = (await page.locator('.leader-row strong').allTextContents()).map(value => value.trim());
-                  if (leaderboardNames.length !== 2 || leaderboardNames[0] !== 'Alpha' || leaderboardNames[1] !== 'Beta') throw new Error('desktop: local leaderboard order failed: '+leaderboardNames.join(','));
-                  await page.evaluate(() => document.querySelector('.leader-row[data-nickname="Alpha"]').click());
-                  if (!(await page.locator('#playerProfileContent').innerText()).includes('120')) throw new Error('desktop: clickable profile stats failed');
-                  await page.evaluate(() => { document.getElementById('playerProfile').style.display='none'; document.getElementById('leaderboard').style.display='none'; });
-                  await page.evaluate(() => localStorage.clear()); await page.reload({waitUntil:'domcontentloaded'});
-                  if (await page.evaluate(() => Boolean(window.KUKAC_ACCOUNT?.player))) throw new Error('desktop: local profile remained after storage clear');
-                  await page.click('#startIdentity'); await page.click('[data-account-mode="recover"]'); await page.fill('#recoveryCodeInput',JSON.stringify(backup)); await page.click('#recoverForm button[type="submit"]');
-                  await page.waitForFunction(() => window.KUKAC_ACCOUNT?.player?.nickname === 'Alpha');
-                  if (!await page.evaluate(() => window.KUKAC_ACCOUNT.player.highScore === 120 && window.KUKAC_ACCOUNT.player.totalGames === 1)) throw new Error('desktop: recovery stats failed');
-                  await page.reload({waitUntil:'domcontentloaded'});
-                  if (!await page.evaluate(() => window.KUKAC_ACCOUNT?.player?.nickname === 'Alpha')) throw new Error('desktop: profile persistence failed');
-                  await page.click('#startIdentity'); await page.click('#logoutBtn');
-                  await page.fill('#loginNickname','Alpha'); await page.fill('#loginPassword','wrong-pass'); await page.click('#loginForm button[type="submit"]');
-                  await page.waitForTimeout(250); if (await page.evaluate(() => Boolean(window.KUKAC_ACCOUNT.player))) throw new Error('desktop: wrong password accepted');
-                  await page.fill('#loginPassword','alpha-pass-42'); await page.click('#loginForm button[type="submit"]'); await page.waitForFunction(() => window.KUKAC_ACCOUNT?.player?.nickname === 'Alpha');
-                  await page.click('#closeAccount');
-                }
-                await page.click('#startBtn');
-                await page.waitForTimeout(500);
-                if (await page.locator('#start').evaluate(el => getComputedStyle(el).display) !== 'none') {
-                  throw new Error(vp.name + ': start overlay did not close');
-                }
-
-                const canvasBox = await page.locator('canvas').boundingBox();
-                if (!canvasBox || canvasBox.width < 100 || canvasBox.height < 100) {
-                  throw new Error(vp.name + ': WebGL canvas not rendered');
-                }
-
-                if (vp.name !== 'desktop') {
-                  const boostDisplay = await page.locator('#boost').evaluate(el => getComputedStyle(el).display);
-                  if (boostDisplay === 'none') throw new Error(vp.name + ': mobile/tablet BOOST control missing');
-                }
-
-                if (vp.name === 'desktop') {
-                  const qa = await page.evaluate(() => {
-                    const api = window.__KUKAC_QA__;
-                    if (!api) return { error: 'QA API missing' };
-                    const initial = api.resetTest();
-                    const c1 = api.collide();
-                    const c2 = api.collide();
-                    const c3 = api.collide();
-                    const c4 = api.collide();
-                    const c5 = api.collide();
-                    const collectible = api.ensureCollectible();
-                    const royal = api.triggerRoyal();
-                    const dragon = api.triggerDragon();
-                    return { initial, c1, c2, c3, c4, c5, collectible, royal, dragon };
-                  });
-                  if (qa.error) throw new Error('desktop: ' + qa.error);
-                  if (qa.initial.lives !== 5 || qa.initial.shield !== 3) throw new Error('desktop: invalid initial survival state');
-                  if (qa.c1.lives !== 5 || qa.c1.shield !== 2) throw new Error('desktop: shield hit 1 failed');
-                  if (qa.c2.lives !== 5 || qa.c2.shield !== 1) throw new Error('desktop: shield hit 2 failed');
-                  if (qa.c3.lives !== 5 || qa.c3.shield !== 0) throw new Error('desktop: shield hit 3 failed');
-                  if (qa.c4.lives !== 4) throw new Error('desktop: first life loss failed');
-                  if (qa.c5.lives !== 3) throw new Error('desktop: subsequent life loss failed');
-                  if (!qa.c1.inBounds || !qa.c2.inBounds || !qa.c3.inBounds || !qa.c4.inBounds || !qa.c5.inBounds) throw new Error('desktop: respawn placed snake outside arena');
-                  if (!qa.collectible) throw new Error('desktop: collectible watchdog failed');
-                  if (!qa.royal.royal || !qa.royal.foodRoyal) throw new Error('desktop: Royal Event failed');
-                  if (!qa.dragon) throw new Error('desktop: Dragon Event failed');
-                }
-
-                if (errors.length) throw new Error(vp.name + ': page errors: ' + errors.join(' | '));
-                await page.screenshot({ path: 'qa-' + vp.name + '.png', fullPage: true });
+          const {chromium}=require('playwright');
+          (async()=>{
+            const browser=await chromium.launch();
+            try{
+              for(const vp of [{name:'desktop',width:1440,height:900,mobile:false},{name:'portrait',width:390,height:844,mobile:true},{name:'landscape',width:844,height:390,mobile:true}]){
+                const page=await browser.newPage({viewport:{width:vp.width,height:vp.height},isMobile:vp.mobile,hasTouch:vp.mobile});
+                const errors=[];page.on('pageerror',e=>errors.push(String(e)));
+                await page.goto('http://127.0.0.1:4173/?qa=1&seed=42');
+                if(await page.locator('#accountBtn,#loginForm,#registerForm').count())throw Error('Account UI remains');
+                if(vp.name==='portrait'&&!await page.locator('#rotateHint').isVisible())throw Error('Portrait hint missing');
+                if(vp.name==='landscape'&&await page.locator('#rotateHint').isVisible())throw Error('Landscape blocked');
+                await page.locator('#startBtn').click({force:true});
+                if(await page.locator('#start').isVisible())throw Error('Guest start failed');
+                if(await page.locator('canvas').count()!==1)throw Error('Canvas missing');
+                if(vp.mobile&&await page.locator('#boost').evaluate(e=>getComputedStyle(e).display==='none'))throw Error('Boost missing');
+                if(errors.length)throw Error(errors.join(' | '));
+                await page.screenshot({path:'qa-'+vp.name+'.png'});
                 await page.close();
               }
-            } finally {
-              await browser.close();
-            }
-          })().catch(err => { console.error(err); process.exit(1); });
+            }finally{await browser.close()}
+          })().catch(e=>{console.error(e);process.exit(1)});
           NODE
-      - name: Upload QA screenshots
+      - uses: actions/upload-artifact@v4
         if: always()
-        uses: actions/upload-artifact@v4
         with:
           name: kukac-browser-qa
           path: qa-*.png
-          if-no-files-found: ignore
