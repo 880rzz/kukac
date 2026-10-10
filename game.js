@@ -538,19 +538,15 @@ function animate(t){
   const targetX=direction.x*1.5,targetZ=direction.z*1.5;
   const tablet=innerWidth>=521&&innerWidth<=1024;
   const portrait=innerHeight>innerWidth;
-  const targetY=tablet?(portrait?22:18):19,targetBaseZ=tablet?(portrait?21:19):18;
-  const desiredFov=boosting?59:52;camera.fov+=(desiredFov-camera.fov)*0.08;camera.updateProjectionMatrix();
+  const mobileLandscape=matchMedia('(pointer:coarse) and (orientation:landscape)').matches;
+  const targetY=mobileLandscape?26:(tablet?(portrait?22:18):19),targetBaseZ=mobileLandscape?28:(tablet?(portrait?21:19):18);
+  const desiredFov=mobileLandscape?(boosting?68:64):(boosting?59:52);camera.fov+=(desiredFov-camera.fov)*0.08;camera.updateProjectionMatrix();
   camera.position.y+=(targetY+gyro.z*3-camera.position.y)*0.025;
-  camera.position.x+=(targetX-camera.position.x)*0.02;
-  camera.position.z+=(targetBaseZ+targetZ-camera.position.z)*0.02;
+  camera.position.x+=(targetX+Math.sin(gyro.x)*5-camera.position.x)*0.035;
+  camera.position.z+=(targetBaseZ+targetZ+Math.cos(gyro.x)*2-2-camera.position.z)*0.035;
   if(shake>0){camera.position.x+=(rand()-0.5)*shake;camera.position.y+=(rand()-0.5)*shake;shake*=0.9}
   gyro.x+=(gyro.targetX-gyro.x)*0.055;
   gyro.z+=(gyro.targetZ-gyro.z)*0.055;
-  // Orbit around the arena center; retain distance and full-board framing.
-  const radius=Math.hypot(camera.position.x,camera.position.z);
-  const azimuth=Math.atan2(camera.position.x,camera.position.z)+gyro.x;
-  camera.position.x=Math.sin(azimuth)*radius;
-  camera.position.z=Math.cos(azimuth)*radius;
   camera.lookAt(0,0,0);
   renderer.render(scene,camera);
 }
