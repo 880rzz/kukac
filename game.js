@@ -540,7 +540,7 @@ function animate(t){
   const portrait=innerHeight>innerWidth;
   const targetY=tablet?(portrait?22:18):19,targetBaseZ=tablet?(portrait?21:19):18;
   const desiredFov=boosting?59:52;camera.fov+=(desiredFov-camera.fov)*0.08;camera.updateProjectionMatrix();
-  camera.position.y+=(targetY-camera.position.y)*0.025;
+  camera.position.y+=(targetY+gyro.z*3-camera.position.y)*0.025;
   camera.position.x+=(targetX-camera.position.x)*0.02;
   camera.position.z+=(targetBaseZ+targetZ-camera.position.z)*0.02;
   if(shake>0){camera.position.x+=(rand()-0.5)*shake;camera.position.y+=(rand()-0.5)*shake;shake*=0.9}
@@ -551,7 +551,6 @@ function animate(t){
   const azimuth=Math.atan2(camera.position.x,camera.position.z)+gyro.x;
   camera.position.x=Math.sin(azimuth)*radius;
   camera.position.z=Math.cos(azimuth)*radius;
-  camera.position.y+=gyro.z*3;
   camera.lookAt(0,0,0);
   renderer.render(scene,camera);
 }
