@@ -68,7 +68,6 @@ function applyLanguage(lang){
   $('soundBtn').setAttribute('aria-label',lang==='de'?'Ton an/aus':lang==='tr'?'Sesi aç/kapat':lang==='uk'?'Увімкнути/вимкнути звук':lang==='hu'?'Hang ki/be':'Sound on/off');
   $('helpBtn').setAttribute('aria-label',lang==='de'?'Hilfe':lang==='tr'?'Yardım':lang==='uk'?'Допомога':lang==='hu'?'Súgó':'Help');
   $('pauseBtn').setAttribute('aria-label',t('pause'));
-  window.KUKAC_ACCOUNT?.refreshLabels?.();
 }
 
 $('best').textContent=best;
@@ -400,12 +399,6 @@ function handleCollision(){
 }
 function die(){
   if(gameState.session.isDead)return;gameState.session.isDead=true;gameState.session.isRunning=false;shake=0.55;sound('over');
-  window.KUKAC_ACCOUNT?.submitRun({
-    score,level,stars:gameState.progression.starCount,coins:gameState.run.coins,
-    playMs:Math.max(0,Math.round(performance.now()-gameState.run.startedAt)),
-    bestCombo:gameState.run.bestCombo,starsRecovered:gameState.run.starsRecovered,
-    dragonSurvivals:gameState.run.dragonSurvivals,royalStars:gameState.run.royalStars
-  });
   if(score>best){best=score;localStorage.setItem('kukac3d-best',best);updateHUD()}
   setTimeout(()=>{ $('resultText').innerHTML=t('result')(score,level,best);$('gameover').style.display='grid';},350);
 }
@@ -457,11 +450,11 @@ function togglePause(){
 }
 function toggleSound(){gameState.session.soundEnabled=!gameState.session.soundEnabled;$('soundBtn').textContent=gameState.session.soundEnabled?'🔊':'🔇';if(gameState.session.soundEnabled)sound('turn')}
 function startGame(){
-  if(!qaMode&&!window.KUKAC_ACCOUNT?.requireProfile?.())return;
+  
   audio.resume();startAudioLayers();
-  $('start').style.display='none';$('gameover').style.display='none';reset();gameState.session.isRunning=true;window.KUKAC_ACCOUNT?.startRun();sound('start');
+  $('start').style.display='none';$('gameover').style.display='none';reset();gameState.session.isRunning=true;sound('start');
 }
-function restart(){ $('gameover').style.display='none';reset();gameState.session.isRunning=true;window.KUKAC_ACCOUNT?.startRun();sound('start') }
+function restart(){ $('gameover').style.display='none';reset();gameState.session.isRunning=true;sound('start') }
 
 window.addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
@@ -483,8 +476,36 @@ $('boost').addEventListener('pointerdown',()=>boosting=true);$('boost').addEvent
 $('startBtn').onclick=startGame;$('restartBtn').onclick=restart;$('pauseBtn').onclick=togglePause;$('soundBtn').onclick=toggleSound;
 $('controlsToggle').onclick=()=>{document.body.classList.toggle('dpad');localStorage.setItem('kukac3d-dpad',document.body.classList.contains('dpad')?'1':'0')};
 if(localStorage.getItem('kukac3d-dpad')==='1')document.body.classList.add('dpad');
-$('helpBtn').onclick=()=>$('help').style.display='grid';$('showHelp').onclick=()=>$('help').style.display='grid';$('closeHelp').onclick=()=>$('help').style.display='none';document.querySelectorAll('.privacy-open').forEach(b=>b.onclick=()=>$('privacy').style.display='grid');$('closePrivacy').onclick=()=>$('privacy').style.display='none';$('privacyDone').onclick=()=>$('privacy').style.display='none';
+$('helpBtn').onclick=()=>$('help').style.display='grid';$('showHelp').onclick=()=>$('help').style.display='grid';$('closeHelp').onclick=()=>$('help').style.display='none';
 
+// Device motion changes only the camera viewpoint, never the snake direction.
+const gyro={enabled:false,base:null,x:0,z:0,targetX:0,targetZ:0};
+const gyroButton=$('gyroToggle');
+const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+function onDeviceOrientation(event){
+  if(!gyro.enabled||event.beta==null||event.gamma==null)return;
+  // Capture a neutral position when enabled; keep perspective changes subtle.
+  const angle=(screen.orientation?.angle??window.orientation??0)*Math.PI/180;
+  const beta=event.beta*Math.PI/180,gamma=event.gamma*Math.PI/180;
+  const x=gamma*Math.cos(angle)-beta*Math.sin(angle);
+  const z=gamma*Math.sin(angle)+beta*Math.cos(angle);
+  if(!gyro.base){gyro.base={x,z};return}
+  gyro.targetX=clamp((x-gyro.base.x)*0.75,-0.32,0.32);
+  gyro.targetZ=clamp((z-gyro.base.z)*0.5,-0.2,0.2);
+}
+gyroButton.onclick=async()=>{
+  if(gyro.enabled){gyro.enabled=false;gyro.base=null;gyro.targetX=gyro.targetZ=0;gyroButton.setAttribute('aria-pressed','false');return}
+  if(typeof DeviceOrientationEvent==='undefined'){gyroButton.title='Motion sensors unavailable';return}
+  try{
+    if(typeof DeviceOrientationEvent.requestPermission==='function'){
+      const permission=await DeviceOrientationEvent.requestPermission();
+      if(permission!=='granted')return;
+    }
+    gyro.base=null;gyro.enabled=true;gyroButton.setAttribute('aria-pressed','true');
+  }catch(error){gyroButton.title='Motion permission unavailable'}
+};
+window.addEventListener('deviceorientation',onDeviceOrientation,{passive:true});
+window.addEventListener('orientationchange',()=>{gyro.base=null;gyro.targetX=gyro.targetZ=0});
 let sx=0,sy=0,holdBoostTimer=null;
 renderer.domElement.addEventListener('touchstart',e=>{const t=e.touches[0];if(t.clientX>innerWidth*0.68){holdBoostTimer=setTimeout(()=>{boosting=true;haptic(20)},260)}},{passive:true});
 renderer.domElement.addEventListener('touchend',()=>{clearTimeout(holdBoostTimer);holdBoostTimer=null;boosting=false},{passive:true});
@@ -510,12 +531,15 @@ function animate(t){
   const targetX=direction.x*1.5,targetZ=direction.z*1.5;
   const tablet=innerWidth>=521&&innerWidth<=1024;
   const portrait=innerHeight>innerWidth;
-  const targetY=tablet?(portrait?22:18):19,targetBaseZ=tablet?(portrait?21:19):18;
-  const desiredFov=boosting?59:52;camera.fov+=(desiredFov-camera.fov)*0.08;camera.updateProjectionMatrix();
-  camera.position.y+=(targetY-camera.position.y)*0.025;
-  camera.position.x+=(targetX-camera.position.x)*0.02;
-  camera.position.z+=(targetBaseZ+targetZ-camera.position.z)*0.02;
+  const mobileLandscape=matchMedia('(pointer:coarse) and (orientation:landscape)').matches;
+  const targetY=mobileLandscape?26:(tablet?(portrait?22:18):19),targetBaseZ=mobileLandscape?28:(tablet?(portrait?21:19):18);
+  const desiredFov=mobileLandscape?(boosting?68:64):(boosting?59:52);camera.fov+=(desiredFov-camera.fov)*0.08;camera.updateProjectionMatrix();
+  camera.position.y+=(targetY+gyro.z*3-camera.position.y)*0.025;
+  camera.position.x+=(targetX+Math.sin(gyro.x)*5-camera.position.x)*0.035;
+  camera.position.z+=(targetBaseZ+targetZ+Math.cos(gyro.x)*2-2-camera.position.z)*0.035;
   if(shake>0){camera.position.x+=(rand()-0.5)*shake;camera.position.y+=(rand()-0.5)*shake;shake*=0.9}
+  gyro.x+=(gyro.targetX-gyro.x)*0.055;
+  gyro.z+=(gyro.targetZ-gyro.z)*0.055;
   camera.lookAt(0,0,0);
   renderer.render(scene,camera);
 }
