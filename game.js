@@ -483,8 +483,36 @@ $('boost').addEventListener('pointerdown',()=>boosting=true);$('boost').addEvent
 $('startBtn').onclick=startGame;$('restartBtn').onclick=restart;$('pauseBtn').onclick=togglePause;$('soundBtn').onclick=toggleSound;
 $('controlsToggle').onclick=()=>{document.body.classList.toggle('dpad');localStorage.setItem('kukac3d-dpad',document.body.classList.contains('dpad')?'1':'0')};
 if(localStorage.getItem('kukac3d-dpad')==='1')document.body.classList.add('dpad');
-$('helpBtn').onclick=()=>$('help').style.display='grid';$('showHelp').onclick=()=>$('help').style.display='grid';$('closeHelp').onclick=()=>$('help').style.display='none';document.querySelectorAll('.privacy-open').forEach(b=>b.onclick=()=>$('privacy').style.display='grid');$('closePrivacy').onclick=()=>$('privacy').style.display='none';$('privacyDone').onclick=()=>$('privacy').style.display='none';
+$('helpBtn').onclick=()=>$('help').style.display='grid';$('showHelp').onclick=()=>$('help').style.display='grid';$('closeHelp').onclick=()=>$('help').style.display='none';
 
+// Device motion changes only the camera viewpoint, never the snake direction.
+const gyro={enabled:false,base:null,x:0,z:0,targetX:0,targetZ:0};
+const gyroButton=$('gyroToggle');
+const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+function onDeviceOrientation(event){
+  if(!gyro.enabled||event.beta==null||event.gamma==null)return;
+  // Capture a neutral position when enabled; keep perspective changes subtle.
+  const angle=(screen.orientation?.angle??window.orientation??0)*Math.PI/180;
+  const beta=event.beta*Math.PI/180,gamma=event.gamma*Math.PI/180;
+  const x=gamma*Math.cos(angle)-beta*Math.sin(angle);
+  const z=gamma*Math.sin(angle)+beta*Math.cos(angle);
+  if(!gyro.base){gyro.base={x,z};return}
+  gyro.targetX=clamp((x-gyro.base.x)*0.75,-0.32,0.32);
+  gyro.targetZ=clamp((z-gyro.base.z)*0.5,-0.2,0.2);
+}
+gyroButton.onclick=async()=>{
+  if(gyro.enabled){gyro.enabled=false;gyro.base=null;gyro.targetX=gyro.targetZ=0;gyroButton.setAttribute('aria-pressed','false');return}
+  if(typeof DeviceOrientationEvent==='undefined'){gyroButton.title='Motion sensors unavailable';return}
+  try{
+    if(typeof DeviceOrientationEvent.requestPermission==='function'){
+      const permission=await DeviceOrientationEvent.requestPermission();
+      if(permission!=='granted')return;
+    }
+    gyro.base=null;gyro.enabled=true;gyroButton.setAttribute('aria-pressed','true');
+  }catch(error){gyroButton.title='Motion permission unavailable'}
+};
+window.addEventListener('deviceorientation',onDeviceOrientation,{passive:true});
+window.addEventListener('orientationchange',()=>{gyro.base=null;gyro.targetX=gyro.targetZ=0});
 let sx=0,sy=0,holdBoostTimer=null;
 renderer.domElement.addEventListener('touchstart',e=>{const t=e.touches[0];if(t.clientX>innerWidth*0.68){holdBoostTimer=setTimeout(()=>{boosting=true;haptic(20)},260)}},{passive:true});
 renderer.domElement.addEventListener('touchend',()=>{clearTimeout(holdBoostTimer);holdBoostTimer=null;boosting=false},{passive:true});
@@ -516,6 +544,14 @@ function animate(t){
   camera.position.x+=(targetX-camera.position.x)*0.02;
   camera.position.z+=(targetBaseZ+targetZ-camera.position.z)*0.02;
   if(shake>0){camera.position.x+=(rand()-0.5)*shake;camera.position.y+=(rand()-0.5)*shake;shake*=0.9}
+  gyro.x+=(gyro.targetX-gyro.x)*0.055;
+  gyro.z+=(gyro.targetZ-gyro.z)*0.055;
+  // Orbit around the arena center; retain distance and full-board framing.
+  const radius=Math.hypot(camera.position.x,camera.position.z);
+  const azimuth=Math.atan2(camera.position.x,camera.position.z)+gyro.x;
+  camera.position.x=Math.sin(azimuth)*radius;
+  camera.position.z=Math.cos(azimuth)*radius;
+  camera.position.y+=gyro.z*3;
   camera.lookAt(0,0,0);
   renderer.render(scene,camera);
 }
