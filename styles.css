@@ -155,6 +155,6 @@ body.dpad #controls{opacity:1;pointer-events:auto;transform:scale(1)}
  .card h1{font-size:clamp(26px,5vw,38px)}.card p{font-size:12px;line-height:1.3;margin:8px 0}.start-lang{margin:0 0 5px}.start-rules{margin:7px 0;gap:5px}.start-rules span{padding:5px;font-size:10px}.primary,.secondary{padding:9px;margin-top:6px}
 }
 
-#gyroToggle{display:none;background:rgba(9,24,42,.75);border:1px solid rgba(255,255,255,.4);border-radius:12px;color:white;padding:10px 14px;font:700 12px system-ui;letter-spacing:.08em;cursor:pointer}
+#gyroToggle{position:fixed;z-index:12;top:max(54px,calc(env(safe-area-inset-top) + 45px));right:max(12px,env(safe-area-inset-right));display:none;background:rgba(9,24,42,.75);border:1px solid rgba(255,255,255,.4);border-radius:12px;color:white;padding:10px 14px;font:700 12px system-ui;letter-spacing:.08em;cursor:pointer}
 #gyroToggle[aria-pressed="true"]{border-color:#a6e876;color:#c8ff9a}
 @media(pointer:coarse) and (orientation:landscape){#gyroToggle{display:inline-flex;align-items:center;justify-content:center;min-height:44px}}
