@@ -68,7 +68,6 @@ function applyLanguage(lang){
   $('soundBtn').setAttribute('aria-label',lang==='de'?'Ton an/aus':lang==='tr'?'Sesi aç/kapat':lang==='uk'?'Увімкнути/вимкнути звук':lang==='hu'?'Hang ki/be':'Sound on/off');
   $('helpBtn').setAttribute('aria-label',lang==='de'?'Hilfe':lang==='tr'?'Yardım':lang==='uk'?'Допомога':lang==='hu'?'Súgó':'Help');
   $('pauseBtn').setAttribute('aria-label',t('pause'));
-  window.KUKAC_ACCOUNT?.refreshLabels?.();
 }
 
 $('best').textContent=best;
@@ -400,12 +399,6 @@ function handleCollision(){
 }
 function die(){
   if(gameState.session.isDead)return;gameState.session.isDead=true;gameState.session.isRunning=false;shake=0.55;sound('over');
-  window.KUKAC_ACCOUNT?.submitRun({
-    score,level,stars:gameState.progression.starCount,coins:gameState.run.coins,
-    playMs:Math.max(0,Math.round(performance.now()-gameState.run.startedAt)),
-    bestCombo:gameState.run.bestCombo,starsRecovered:gameState.run.starsRecovered,
-    dragonSurvivals:gameState.run.dragonSurvivals,royalStars:gameState.run.royalStars
-  });
   if(score>best){best=score;localStorage.setItem('kukac3d-best',best);updateHUD()}
   setTimeout(()=>{ $('resultText').innerHTML=t('result')(score,level,best);$('gameover').style.display='grid';},350);
 }
@@ -459,9 +452,9 @@ function toggleSound(){gameState.session.soundEnabled=!gameState.session.soundEn
 function startGame(){
   
   audio.resume();startAudioLayers();
-  $('start').style.display='none';$('gameover').style.display='none';reset();gameState.session.isRunning=true;window.KUKAC_ACCOUNT?.startRun();sound('start');
+  $('start').style.display='none';$('gameover').style.display='none';reset();gameState.session.isRunning=true;sound('start');
 }
-function restart(){ $('gameover').style.display='none';reset();gameState.session.isRunning=true;window.KUKAC_ACCOUNT?.startRun();sound('start') }
+function restart(){ $('gameover').style.display='none';reset();gameState.session.isRunning=true;sound('start') }
 
 window.addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
